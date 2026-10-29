@@ -29,6 +29,12 @@ struct UserProfile {
     var hasPaidPlan: Bool { currentPlan.caseInsensitiveCompare("basic") != .orderedSame }
     /// Night plans are identified by a plan code ending in "Nyt".
     var isNightPlan: Bool { currentPlan.lowercased().hasSuffix("nyt") }
+    /// Readable plan name: "premiumNyt" → "Premium Night".
+    var planName: String {
+        let base = isNightPlan ? String(currentPlan.dropLast(3)) : currentPlan
+        let name = base.prefix(1).uppercased() + base.dropFirst()
+        return isNightPlan ? "\(name) Night" : name
+    }
     var minutesLeft: Int? { totalTimeMonth > 0 ? max(0, totalTimeMonth - timeUsedMonth) : nil }
     var daysLeft: Int? { renewDate.map { Calendar.current.dateComponents([.day], from: .now, to: $0).day ?? 0 } }
 

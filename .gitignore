@@ -18,3 +18,6 @@ moonlight-ios/
 *.mobileprovision
 *.p12
 *.cer
+
+# Local signing settings for scripts/renew-and-install.sh
+scripts/renew.env

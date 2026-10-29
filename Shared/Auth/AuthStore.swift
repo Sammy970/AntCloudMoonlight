@@ -16,6 +16,14 @@ final class AuthStore: ObservableObject {
 
     var accessToken: String? { api.accessToken }
 
+    #if DEBUG
+    /// Screenshot mode: shows the signed-in UI with a fake profile, without touching the Keychain.
+    func previewSignIn(_ profile: UserProfile?) {
+        self.profile = profile
+        state = profile == nil ? .loggedOut : .loggedIn
+    }
+    #endif
+
     func restore() async {
         guard Keychain.get(Self.refreshAccount) != nil, await refreshAccessToken() != nil else {
             state = .loggedOut

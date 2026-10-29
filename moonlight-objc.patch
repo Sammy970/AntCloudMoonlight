@@ -24,9 +24,18 @@ index 5db73f5..836aded 100644
  #if !TARGET_OS_TV
      UIApplicationShortcutItem* shortcut = [launchOptions valueForKey:UIApplicationLaunchOptionsShortcutItemKey];
 diff --git a/Limelight/Limelight-Info.plist b/Limelight/Limelight-Info.plist
-index 963c433..174aeb8 100644
+index 963c433..dba04a9 100644
 --- a/Limelight/Limelight-Info.plist
 +++ b/Limelight/Limelight-Info.plist
+@@ -9,7 +9,7 @@
+ 	<key>CFBundleDevelopmentRegion</key>
+ 	<string>en</string>
+ 	<key>CFBundleDisplayName</key>
+-	<string>${PRODUCT_NAME}</string>
++	<string>AntCloud</string>
+ 	<key>CFBundleExecutable</key>
+ 	<string>${EXECUTABLE_NAME}</string>
+ 	<key>CFBundleIdentifier</key>
 @@ -35,14 +35,14 @@
  	</array>
  	<key>GCSupportsControllerUserInteraction</key>
@@ -44,13 +53,31 @@ index 963c433..174aeb8 100644
  	<key>NSAppTransportSecurity</key>
  	<dict>
  		<key>NSAllowsArbitraryLoads</key>
-@@ -78,11 +78,13 @@
+@@ -60,8 +60,13 @@
+ 	<string>Moonlight uses the local network to connect to your gaming PC for streaming.</string>
+ 	<key>UIApplicationSupportsIndirectInputEvents</key>
+ 	<true/>
+-	<key>UILaunchStoryboardName</key>
+-	<string>Launch Screen</string>
++	<key>UILaunchScreen</key>
++	<dict>
++		<key>UIColorName</key>
++		<string>AntCloudLaunchBackground</string>
++		<key>UIImageName</key>
++		<string>AntCloudLaunchLogo</string>
++	</dict>
+ 	<key>UIMainStoryboardFile</key>
+ 	<string>iPhone</string>
+ 	<key>UIMainStoryboardFile~ipad</key>
+@@ -76,6 +81,7 @@
+ 	<true/>
+ 	<key>UISupportedInterfaceOrientations</key>
  	<array>
++		<string>UIInterfaceOrientationPortrait</string>
  		<string>UIInterfaceOrientationLandscapeLeft</string>
  		<string>UIInterfaceOrientationLandscapeRight</string>
-+		<string>UIInterfaceOrientationPortrait</string>
  	</array>
- 	<key>UISupportedInterfaceOrientations~ipad</key>
+@@ -83,6 +89,7 @@
  	<array>
  		<string>UIInterfaceOrientationLandscapeLeft</string>
  		<string>UIInterfaceOrientationLandscapeRight</string>
@@ -59,7 +86,7 @@ index 963c433..174aeb8 100644
  	<key>UIViewControllerBasedStatusBarAppearance</key>
  	<false/>
 diff --git a/Limelight/ViewControllers/MainFrameViewController.m b/Limelight/ViewControllers/MainFrameViewController.m
-index 169bb13..5d21433 100644
+index 169bb13..fdc8783 100644
 --- a/Limelight/ViewControllers/MainFrameViewController.m
 +++ b/Limelight/ViewControllers/MainFrameViewController.m
 @@ -34,6 +34,7 @@
@@ -70,17 +97,18 @@ index 169bb13..5d21433 100644
  
  #include <Limelight.h>
  
-@@ -53,6 +54,9 @@ @implementation MainFrameViewController {
+@@ -53,6 +54,10 @@ @implementation MainFrameViewController {
      NSArray* _sortedAppList;
      NSCache* _boxArtCache;
      bool _background;
 +    // AntCloud: address of the cloud PC to auto-launch "Desktop" on once its app list loads.
 +    NSString* _antCloudLaunchAddress;
 +    BOOL _antCloudShownOnLaunch;
++    UIView* _antCloudCover;
  #if TARGET_OS_TV
      UITapGestureRecognizer* _menuRecognizer;
  #endif
-@@ -63,8 +67,11 @@ - (void)startPairing:(NSString *)PIN {
+@@ -63,8 +68,11 @@ - (void)startPairing:(NSString *)PIN {
      // Needs to be synchronous to ensure the alert is shown before any potential
      // failure callback could be invoked.
      dispatch_sync(dispatch_get_main_queue(), ^{
@@ -93,7 +121,7 @@ index 169bb13..5d21433 100644
                                                          preferredStyle:UIAlertControllerStyleAlert];
          [self->_pairAlert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleDestructive handler:^(UIAlertAction* action) {
              self->_pairAlert = nil;
-@@ -74,6 +81,9 @@ - (void)startPairing:(NSString *)PIN {
+@@ -74,6 +82,9 @@ - (void)startPairing:(NSString *)PIN {
              }];
          }]];
          [[self activeViewController] presentViewController:self->_pairAlert animated:YES completion:nil];
@@ -103,7 +131,7 @@ index 169bb13..5d21433 100644
      });
  }
  
-@@ -938,6 +948,15 @@ - (void)viewDidLoad
+@@ -938,6 +949,15 @@ - (void)viewDidLoad
      
      // Get callbacks associated with the viewController
      [self.revealViewController setDelegate:self];
@@ -119,7 +147,7 @@ index 169bb13..5d21433 100644
      
      // Disable bounce-back on reveal VC otherwise the settings will snap closed
      // if the user drags all the way off the screen opposite the settings pane.
-@@ -1109,7 +1128,22 @@ - (void)viewDidAppear:(BOOL)animated
+@@ -1109,7 +1129,28 @@ - (void)viewDidAppear:(BOOL)animated
      
      // Check for a pending shortcut action when appearing
      [self handlePendingShortcutAction];
@@ -131,11 +159,17 @@ index 169bb13..5d21433 100644
 +    // viewDidDisappear removes all of our observers while the panel covers us).
 +    if (!_antCloudShownOnLaunch) {
 +        _antCloudShownOnLaunch = YES;
-+        [self showAntCloud];
++        [self showAntCloudAnimated:NO];
 +    } else {
 +        NSString* pending = ((NSString* (*)(id, SEL))objc_msgSend)(NSClassFromString(@"AntCloudPanel"), NSSelectorFromString(@"takePendingConnectAddress"));
 +        if (pending != nil) {
 +            [self antCloudConnectToAddress:pending];
++        } else if (_antCloudLaunchAddress == nil) {
++            // Back from a stream: AntCloud is the app's home, Moonlight only runs the connection.
++            [self antCloudShowCover:nil];
++            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.3 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
++                [self showAntCloudAnimated:YES];
++            });
 +        }
 +    }
 +#endif
@@ -143,7 +177,31 @@ index 169bb13..5d21433 100644
      [[NSNotificationCenter defaultCenter] addObserver: self
                                               selector: @selector(handleReturnToForeground)
                                                   name: UIApplicationDidBecomeActiveNotification
-@@ -1341,6 +1375,89 @@ - (void) updateAppsForHost:(TemporaryHost*)host {
+@@ -1124,6 +1165,12 @@ - (void)viewDidAppear:(BOOL)animated
+ - (void)viewWillAppear:(BOOL)animated
+ {
+     [super viewWillAppear:animated];
++#if !TARGET_OS_TV
++    // AntCloud: hide Moonlight behind the launch colour until the panel is presented in viewDidAppear.
++    if (!_antCloudShownOnLaunch) {
++        [self antCloudShowCover:nil];
++    }
++#endif
+     
+     // We can get here on home press while streaming
+     // since the stream view segues to us just before
+@@ -1142,6 +1189,10 @@ - (void)viewWillAppear:(BOOL)animated
+ - (void)viewDidDisappear:(BOOL)animated
+ {
+     [super viewDidDisappear:animated];
++#if !TARGET_OS_TV
++    // AntCloud: the stream (or the panel) now covers us.
++    [self antCloudHideCover];
++#endif
+     
+     // when discovery stops, we must create a new instance because
+     // you cannot restart an NSOperation when it is finished
+@@ -1341,6 +1392,150 @@ - (void) updateAppsForHost:(TemporaryHost*)host {
      
      [hostScrollView removeFromSuperview];
      [self.collectionView reloadData];
@@ -174,12 +232,70 @@ index 169bb13..5d21433 100644
 +}
 +
 +- (void) showAntCloud {
++    [self showAntCloudAnimated:YES];
++}
++
++- (void) showAntCloudAnimated:(BOOL)animated {
 +    Class panel = NSClassFromString(@"AntCloudPanel");
 +    if (panel == nil) {
++        [self antCloudHideCover];
 +        return;
 +    }
 +    UIViewController* controller = ((UIViewController* (*)(id, SEL))objc_msgSend)(panel, NSSelectorFromString(@"makeViewController"));
-+    [[self activeViewController] presentViewController:controller animated:YES completion:nil];
++    [[self activeViewController] presentViewController:controller animated:animated completion:^{
++        [self antCloudHideCover];
++    }];
++}
++
++// Covers Moonlight's own screens in AntCloud's launch colour and logo: at launch until the panel
++// is up, and while a Play connects (with `text` and a spinner), so Moonlight's host list never shows.
++- (void) antCloudShowCover:(NSString*)text {
++    [self antCloudHideCover];
++    UIView* host = self.navigationController.view ?: self.view;
++    UIView* cover = [[UIView alloc] initWithFrame:host.bounds];
++    cover.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
++    cover.backgroundColor = [UIColor colorNamed:@"AntCloudLaunchBackground"] ?: UIColor.systemBackgroundColor;
++
++    UIImageView* logo = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"AntCloudLaunchLogo"]];
++    CGFloat side = text == nil ? 171 : 120;
++    [logo.widthAnchor constraintEqualToConstant:side].active = YES;
++    [logo.heightAnchor constraintEqualToConstant:side].active = YES;
++    UIStackView* stack = [[UIStackView alloc] initWithArrangedSubviews:@[logo]];
++    stack.axis = UILayoutConstraintAxisVertical;
++    stack.alignment = UIStackViewAlignmentCenter;
++    stack.spacing = 6;
++    if (text != nil) {
++        UIActivityIndicatorView* spinner = [[UIActivityIndicatorView alloc] initWithActivityIndicatorStyle:UIActivityIndicatorViewStyleMedium];
++        [spinner startAnimating];
++        UILabel* label = [[UILabel alloc] init];
++        label.text = text;
++        label.font = [UIFont preferredFontForTextStyle:UIFontTextStyleHeadline];
++        label.textColor = UIColor.labelColor;
++        [stack addArrangedSubview:label];
++        [stack addArrangedSubview:spinner];
++        [stack setCustomSpacing:14 afterView:label];
++    }
++    stack.translatesAutoresizingMaskIntoConstraints = NO;
++    [cover addSubview:stack];
++    [stack.centerXAnchor constraintEqualToAnchor:cover.centerXAnchor].active = YES;
++    [stack.centerYAnchor constraintEqualToAnchor:cover.centerYAnchor].active = YES;
++    [host addSubview:cover];
++    _antCloudCover = cover;
++
++    if (text != nil) {
++        // Safety net: if the connection stalls somewhere silent, uncover Moonlight after a minute
++        // (its "AntCloud" button leads back).
++        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(60 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
++            if (self->_antCloudCover == cover) {
++                [self antCloudHideCover];
++            }
++        });
++    }
++}
++
++- (void) antCloudHideCover {
++    [_antCloudCover removeFromSuperview];
++    _antCloudCover = nil;
 +}
 +
 +// Requested by the AntCloud panel's Play button: add the cloud PC if needed, pair (the PIN is
@@ -190,6 +306,7 @@ index 169bb13..5d21433 100644
 +        return;
 +    }
 +    _antCloudLaunchAddress = address;
++    [self antCloudShowCover:@"Connecting to your cloud PC"];
 +
 +    TemporaryHost* existing = nil;
 +    @synchronized(hostList) {
@@ -216,7 +333,9 @@ index 169bb13..5d21433 100644
 +                        if (host == nil) {
 +                            self->_antCloudLaunchAddress = nil;
 +                            UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"Couldn't Reach Cloud PC" message:error preferredStyle:UIAlertControllerStyleAlert];
-+                            [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
++                            [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:^(UIAlertAction* action) {
++                                [self showAntCloudAnimated:YES];
++                            }]];
 +                            [[self activeViewController] presentViewController:alert animated:YES completion:nil];
 +                            return;
 +                        }

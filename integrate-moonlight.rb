@@ -5,12 +5,15 @@
 #   moonlight-ios/             <- git clone of moonlight-stream/moonlight-ios (submodules fetched)
 #
 # This script is idempotent. It:
-#   1. applies moonlight-objc.patch (edits to MainFrameViewController.m, AppDelegate.m, Info.plist)
-#   2. adds the AntCloud Swift files (panel + Shared) and the SocketIO package to the Moonlight target
+#   1. applies moonlight-objc.patch (edits to MainFrameViewController.m, AppDelegate.m, Info.plist,
+#      including the home-screen name "AntCloud")
+#   2. adds the AntCloud Swift files (panel + Shared), the sign-in logo and the SocketIO package
+#      to the Moonlight target
 #   3. installs the AntCloud app icon
 #
 # Usage: ruby integrate-moonlight.rb [path-to-moonlight-ios]
 require 'xcodeproj'
+require 'fileutils'
 
 here = __dir__
 moonlight = File.expand_path(ARGV[0] || File.join(here, '..', 'moonlight-ios'))
@@ -34,18 +37,34 @@ target = project.targets.find { |t| t.name == 'Moonlight' } or abort 'Moonlight 
 shared = %w[
   Config.swift Log.swift API/APIClient.swift Auth/AuthStore.swift Auth/Keychain.swift
   Session/SessionService.swift Session/StreamSettings.swift
-  Views/LoginView.swift Views/PlatformStyles.swift
+  Views/LoginView.swift Views/PlatformStyles.swift Views/SessionViews.swift
 ].map { |f| File.join(here, 'Shared', f) }
 panel = Dir[File.join(here, '*.swift')].sort
 (shared + panel).each { |f| abort "missing #{f}" unless File.exist?(f) }
 
 group = project.main_group['AntCloud'] || project.main_group.new_group('AntCloud')
+# Drop AntCloud sources from earlier integrations that point somewhere else (e.g. an old
+# checkout), or the same filename ends up compiled twice.
+wanted = panel + shared
+group.files.select { |f| f.path.to_s.end_with?('.swift') && !wanted.include?(f.real_path.to_s) }.each do |ref|
+  stale = ref.real_path.to_s
+  target.source_build_phase.files.select { |bf| bf.file_ref == ref }.each(&:remove_from_project)
+  ref.remove_from_project
+  puts "• removed stale #{stale}"
+end
 existing = target.source_build_phase.files_references.map(&:real_path).map(&:to_s)
 (panel + shared).each do |path|
   next if existing.include?(path)
   ref = group.files.find { |f| f.real_path.to_s == path } || group.new_reference(path)
   target.add_file_references([ref])
 end
+# Logo shown on the sign-in screen (loaded as UIImage(named: "AntCloudLogo")).
+logo = File.join(here, 'AntCloudLogo.png')
+unless target.resources_build_phase.files_references.any? { |f| f.real_path.to_s == logo }
+  ref = group.files.find { |f| f.real_path.to_s == logo } || group.new_reference(logo)
+  target.add_resources([ref])
+end
+
 bridging = File.join(here, 'AntCloud-Bridging-Header.h')
 unless group.files.any? { |f| f.real_path.to_s == bridging }
   group.new_reference(bridging)
@@ -76,6 +95,14 @@ target.build_configurations.each do |config|
 end
 
 project.save
+
+# Launch screen colour and logo (Info.plist's UILaunchScreen points at these), also used by the
+# cover MainFrameViewController shows while it connects.
+assets = File.join(moonlight, 'Limelight', 'Images.xcassets')
+Dir[File.join(here, 'Assets', '*.{colorset,imageset}')].each do |set|
+  FileUtils.cp_r(set, assets, remove_destination: true)
+end
+puts '• installed launch assets'
 
 # 3. App icon: rasterize AppIcon-1024.png into the appiconset sizes.
 iconset = File.join(moonlight, 'Limelight', 'Images.xcassets', 'AppIcon.appiconset')

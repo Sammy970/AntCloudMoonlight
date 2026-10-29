@@ -73,7 +73,37 @@ final class SessionService: ObservableObject {
 
     var isActive: Bool { phase != .idle }
 
+    #if DEBUG
+    /// Screenshot mode: forces a phase without opening a session.
+    func previewPhase(_ phase: Phase) { self.phase = phase }
+    #endif
+
     // MARK: Session lifecycle
+
+    /// Starts a session, but tells a night-plan user up front when it's outside the plan's hours,
+    /// instead of booting the PC only for the server to refuse it later.
+    func startIfAllowed(settings: StreamSettings, nightPlan: Bool) async {
+        guard phase == .idle else { return }
+        if nightPlan && !Self.nightPlanMonitorDisabled {
+            let now = await api.serverTime() ?? .now
+            guard Self.isNightPlanWindow(now) else {
+                Log.info("[session] night plan outside its hours; not starting")
+                notice = Notice(title: "Night Plan Hours",
+                                message: "Your night plan works between 12:30 AM and 9:30 AM IST. Come back then, or switch plans for daytime play.")
+                return
+            }
+        }
+        start(settings: settings, nightPlan: nightPlan)
+    }
+
+    /// Night plans can start between 12:30 AM and 9:30 AM IST.
+    static func isNightPlanWindow(_ date: Date) -> Bool {
+        var ist = Calendar(identifier: .gregorian)
+        ist.timeZone = TimeZone(identifier: "Asia/Kolkata")!
+        let parts = ist.dateComponents([.hour, .minute], from: date)
+        let minutes = (parts.hour ?? 0) * 60 + (parts.minute ?? 0)
+        return minutes >= 30 && minutes < 9 * 60 + 30
+    }
 
     func start(settings: StreamSettings, nightPlan: Bool) {
         guard phase == .idle, let token = api.accessToken else { return }

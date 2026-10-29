@@ -76,7 +76,8 @@ final class AntCloudStore: ObservableObject {
     let auth = AuthStore()
     let session: SessionService
     /// True while the panel is on screen; otherwise session notices are shown over Moonlight.
-    var panelVisible = false
+    /// Starts true so the app launches in portrait straight into AntCloud.
+    var panelVisible = true
     private var noticeSubscription: AnyCancellable?
 
     private init() {
@@ -91,12 +92,54 @@ final class AntCloudStore: ObservableObject {
             guard let pin = note.userInfo?["pin"] as? String else { return }
             Task { @MainActor in await AntCloudStore.shared.submitPairingPIN(pin) }
         }
-        Task { await auth.restore() }
+        if !startPreview() { Task { await auth.restore() } }
+    }
+
+    /// Debug builds only. Launch with `ANTCLOUD_PREVIEW=login` or `home:<phase>` to show a state with a
+    /// sample account (no Keychain, no API), `ANTCLOUD_APPEARANCE=light|dark`, and `ANTCLOUD_SNAPSHOT=<name>`
+    /// to save the screen to Documents/<name>.png a few seconds after launch.
+    private func startPreview() -> Bool {
+        #if DEBUG
+        let env = ProcessInfo.processInfo.environment
+        guard let value = env["ANTCLOUD_PREVIEW"] else { return false }
+        let renew = ISO8601DateFormatter().string(from: .now.addingTimeInterval(12 * 86_400))
+        auth.previewSignIn(value == "login" ? nil : UserProfile(json: [
+            "firstName": "Samyak", "email": "player@example.com", "currentPlan": "premiumNyt",
+            "renewDate": renew, "totalTimeMonth": 3600, "timeUsedMonth": 1290,
+        ]))
+        let phases: [String: SessionService.Phase] = [
+            "idle": .idle, "connecting": .connecting, "queued": .queued(position: 3), "booting": .booting,
+            "ready": .ready, "pairing": .pairing, "streaming": .streaming,
+        ]
+        if value.hasPrefix("home:"), let phase = phases[String(value.dropFirst(5))] { session.previewPhase(phase) }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            let style: UIUserInterfaceStyle = env["ANTCLOUD_APPEARANCE"] == "light" ? .light : env["ANTCLOUD_APPEARANCE"] == "dark" ? .dark : .unspecified
+            Self.keyWindow?.overrideUserInterfaceStyle = style
+        }
+        if let name = env["ANTCLOUD_SNAPSHOT"] {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                guard let window = Self.keyWindow else { return }
+                let image = UIGraphicsImageRenderer(bounds: window.bounds).image { _ in
+                    window.drawHierarchy(in: window.bounds, afterScreenUpdates: true)
+                }
+                let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                try? image.pngData()?.write(to: docs.appendingPathComponent("\(name).png"))
+                Log.info("[preview] saved \(name).png")
+            }
+        }
+        return true
+        #else
+        return false
+        #endif
+    }
+
+    private static var keyWindow: UIWindow? {
+        UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap(\.windows).first { $0.isKeyWindow }
     }
 
     func start() {
         guard let profile = auth.profile else { return }
-        session.start(settings: Self.moonlightStreamSettings(), nightPlan: profile.isNightPlan)
+        Task { await session.startIfAllowed(settings: Self.moonlightStreamSettings(), nightPlan: profile.isNightPlan) }
     }
 
     /// Sets the cloud PC's display to match Moonlight's settings and returns its address.
@@ -137,36 +180,47 @@ final class AntCloudStore: ObservableObject {
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         top?.present(alert, animated: true)
     }
-
-    /// e.g. "1280×720 · 60 FPS · 10 Mbps"
-    static func moonlightStreamSummary() -> String {
-        guard let moonlight = DataManager().getSettings() else { return "Default" }
-        return "\(moonlight.width.intValue)×\(moonlight.height.intValue) · \(moonlight.framerate.intValue) FPS · \(moonlight.bitrate.intValue / 1000) Mbps"
-    }
 }
 
 struct AntCloudRootView: View {
     @ObservedObject var store: AntCloudStore
     @EnvironmentObject private var auth: AuthStore
-    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         NavigationStack {
-            Group {
+            ZStack {
                 switch auth.state {
                 case .restoring:
-                    ProgressView("Signing in…")
+                    // The logo grows slightly and dissolves into the app, continuing the launch screen.
+                    LaunchSplash()
+                        .transition(.asymmetric(insertion: .identity, removal: .opacity.combined(with: .scale(scale: 1.12))))
                 case .loggedOut:
+                    // The aurora runs under a see-through bar on the sign-in screen.
                     LoginView()
+                        .toolbarBackground(.hidden, for: .navigationBar)
+                        .transition(.opacity)
                 case .loggedIn:
                     AntCloudHomeView(store: store)
+                        .transition(.opacity)
                 }
             }
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Moonlight") { dismiss() }
-                }
-            }
+            .animation(.easeInOut(duration: 0.45), value: auth.state)
         }
+        .tint(.antBlue)
+    }
+}
+
+/// Continues the launch screen (same colour, same logo, same place) while the saved sign-in loads.
+private struct LaunchSplash: View {
+    var body: some View {
+        ZStack {
+            Color("AntCloudLaunchBackground").ignoresSafeArea()
+            Image("AntCloudLaunchLogo")
+                .resizable()
+                .frame(width: 171, height: 171)
+            ProgressView()
+                .offset(y: 120)
+        }
+        .toolbar(.hidden, for: .navigationBar)
     }
 }

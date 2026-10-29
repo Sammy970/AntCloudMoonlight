@@ -12,6 +12,9 @@ struct AntCloudHomeView: View {
     @State private var nightMonitorOff = SessionService.nightPlanMonitorDisabled
     @State private var prefs = MoonlightPrefs.load()
     @State private var showingSettings = false
+    @State private var showingNetwork = false
+    /// Kept here so the card can show the last result.
+    @StateObject private var networkCheck = NetworkCheck()
 
     init(store: AntCloudStore) {
         self.store = store
@@ -58,6 +61,7 @@ struct AntCloudHomeView: View {
                 GlassGroup(spacing: 14) {
                     VStack(spacing: 14) {
                         streamCard.reveal(0.3)
+                        networkCard.reveal(0.33)
                         appCard.reveal(0.36)
                     }
                 }
@@ -87,6 +91,27 @@ struct AntCloudHomeView: View {
         .sensoryFeedback(.selection, trigger: prefs)
         .sheet(isPresented: $showingSettings) {
             StreamSettingsSheet(prefs: $prefs)
+        }
+        .sheet(isPresented: $showingNetwork) {
+            NavigationStack {
+                NetworkCheckView(
+                    check: networkCheck,
+                    resolution: String(prefs.height),
+                    fps: String(prefs.fps),
+                    bitrate: prefs.bitrateKbps,
+                    applyBitrate: { prefs.bitrateKbps = $0; prefs.save() },
+                    busy: connecting || session.phase == .pairing
+                )
+                .background { AuroraBackground(intensity: 0.35) }
+                .navigationTitle("Network Check")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { showingNetwork = false }
+                    }
+                }
+            }
+            .sensoryFeedback(.success, trigger: networkCheck.stage == .done)
         }
         .alert(item: $session.notice) { notice in
             Alert(title: Text(notice.title), message: Text(notice.message))
@@ -190,6 +215,48 @@ struct AntCloudHomeView: View {
         }
         .buttonStyle(.plain)
         .disabled(connecting)
+    }
+
+    private var networkCard: some View {
+        Button { showingNetwork = true } label: {
+            card {
+                HStack(spacing: 12) {
+                    Image(systemName: "gauge.with.dots.needle.67percent")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 34, height: 34)
+                        .background(networkTint.gradient, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Network check").font(.subheadline.weight(.semibold))
+                        Text(networkSummary)
+                            .font(.footnote)
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                            .contentTransition(.numericText())
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// The last result, e.g. "45 ms · Good · 322 Mbps", or what the check does.
+    private var networkSummary: String {
+        guard let median = networkCheck.medianLatency, networkCheck.stage == .done else {
+            return networkCheck.isRunning ? "Testing…" : "See how a stream would feel, before starting your PC"
+        }
+        let zone = LatencyScale.zone(for: median).name
+        let speed = networkCheck.downloadMbps.map { " · \(Int($0.rounded())) Mbps" } ?? ""
+        return "\(Int(median.rounded())) ms · \(zone)\(speed)"
+    }
+
+    private var networkTint: Color {
+        guard let median = networkCheck.medianLatency, networkCheck.stage == .done else { return .antBlue }
+        return LatencyScale.zone(for: median).color
     }
 
     private var appCard: some View {

@@ -74,7 +74,7 @@ private struct StreamOverlayPhoneRoot: View {
                 }
                 .buttonStyle(.plain)
                 .reportsTouchableFrame(to: window, id: 1)
-                .transition(.move(edge: .top).combined(with: .opacity))
+                .transition(.scale(scale: 0.9, anchor: .top).combined(with: .opacity))
             }
 
             if let toast = model.toast {

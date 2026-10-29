@@ -1,0 +1,20 @@
+# Build output
+.build/
+build/
+DerivedData/
+
+# A local Moonlight checkout, if placed inside this repo
+moonlight-ios/
+
+# Signed app bundles / installers
+*.app
+*.ipa
+*.dSYM
+
+# macOS
+.DS_Store
+
+# Secrets
+*.mobileprovision
+*.p12
+*.cer

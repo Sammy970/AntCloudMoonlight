@@ -1,0 +1,235 @@
+diff --git a/Limelight/AppDelegate.m b/Limelight/AppDelegate.m
+index 5db73f5..836aded 100644
+--- a/Limelight/AppDelegate.m
++++ b/Limelight/AppDelegate.m
+@@ -7,6 +7,7 @@
+ //
+ 
+ #import "AppDelegate.h"
++#import <objc/message.h>
+ 
+ @implementation AppDelegate
+ 
+@@ -22,6 +23,12 @@ @implementation AppDelegate
+ static NSString* DB_NAME = @"Limelight_iOS.sqlite";
+ #endif
+ 
++// AntCloud: the AntCloud panel is portrait; Moonlight itself stays landscape.
++- (UIInterfaceOrientationMask)application:(UIApplication *)application supportedInterfaceOrientationsForWindow:(UIWindow *)window {
++    NSNumber* mask = ((NSNumber* (*)(id, SEL))objc_msgSend)(NSClassFromString(@"AntCloudPanel"), NSSelectorFromString(@"orientationMask"));
++    return mask != nil ? mask.unsignedIntegerValue : UIInterfaceOrientationMaskLandscape;
++}
++
+ - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
+ #if !TARGET_OS_TV
+     UIApplicationShortcutItem* shortcut = [launchOptions valueForKey:UIApplicationLaunchOptionsShortcutItemKey];
+diff --git a/Limelight/Limelight-Info.plist b/Limelight/Limelight-Info.plist
+index 963c433..174aeb8 100644
+--- a/Limelight/Limelight-Info.plist
++++ b/Limelight/Limelight-Info.plist
+@@ -35,14 +35,14 @@
+ 	</array>
+ 	<key>GCSupportsControllerUserInteraction</key>
+ 	<true/>
+-	<key>LSSupportsGameMode</key>
+-	<true/>
+ 	<key>ITSAppUsesNonExemptEncryption</key>
+ 	<false/>
+ 	<key>LSApplicationCategoryType</key>
+ 	<string>public.app-category.games</string>
+ 	<key>LSRequiresIPhoneOS</key>
+ 	<true/>
++	<key>LSSupportsGameMode</key>
++	<true/>
+ 	<key>NSAppTransportSecurity</key>
+ 	<dict>
+ 		<key>NSAllowsArbitraryLoads</key>
+@@ -78,11 +78,13 @@
+ 	<array>
+ 		<string>UIInterfaceOrientationLandscapeLeft</string>
+ 		<string>UIInterfaceOrientationLandscapeRight</string>
++		<string>UIInterfaceOrientationPortrait</string>
+ 	</array>
+ 	<key>UISupportedInterfaceOrientations~ipad</key>
+ 	<array>
+ 		<string>UIInterfaceOrientationLandscapeLeft</string>
+ 		<string>UIInterfaceOrientationLandscapeRight</string>
++		<string>UIInterfaceOrientationPortrait</string>
+ 	</array>
+ 	<key>UIViewControllerBasedStatusBarAppearance</key>
+ 	<false/>
+diff --git a/Limelight/ViewControllers/MainFrameViewController.m b/Limelight/ViewControllers/MainFrameViewController.m
+index 169bb13..5d21433 100644
+--- a/Limelight/ViewControllers/MainFrameViewController.m
++++ b/Limelight/ViewControllers/MainFrameViewController.m
+@@ -34,6 +34,7 @@
+ #endif
+ 
+ #import <VideoToolbox/VideoToolbox.h>
++#import <objc/message.h>
+ 
+ #include <Limelight.h>
+ 
+@@ -53,6 +54,9 @@ @implementation MainFrameViewController {
+     NSArray* _sortedAppList;
+     NSCache* _boxArtCache;
+     bool _background;
++    // AntCloud: address of the cloud PC to auto-launch "Desktop" on once its app list loads.
++    NSString* _antCloudLaunchAddress;
++    BOOL _antCloudShownOnLaunch;
+ #if TARGET_OS_TV
+     UITapGestureRecognizer* _menuRecognizer;
+ #endif
+@@ -63,8 +67,11 @@ - (void)startPairing:(NSString *)PIN {
+     // Needs to be synchronous to ensure the alert is shown before any potential
+     // failure callback could be invoked.
+     dispatch_sync(dispatch_get_main_queue(), ^{
++        NSString* message = self->_antCloudLaunchAddress != nil
++            ? @"Pairing with your AntCloud PC. The PIN is entered for you — this takes a few seconds."
++            : [NSString stringWithFormat:@"Enter the following PIN on the host machine: %@\n\nIf your host PC is running Sunshine, navigate to the Sunshine web UI to enter the PIN.", PIN];
+         self->_pairAlert = [UIAlertController alertControllerWithTitle:@"Pairing"
+-                                                               message:[NSString stringWithFormat:@"Enter the following PIN on the host machine: %@\n\nIf your host PC is running Sunshine, navigate to the Sunshine web UI to enter the PIN.", PIN]
++                                                               message:message
+                                                         preferredStyle:UIAlertControllerStyleAlert];
+         [self->_pairAlert addAction:[UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleDestructive handler:^(UIAlertAction* action) {
+             self->_pairAlert = nil;
+@@ -74,6 +81,9 @@ - (void)startPairing:(NSString *)PIN {
+             }];
+         }]];
+         [[self activeViewController] presentViewController:self->_pairAlert animated:YES completion:nil];
++
++        // AntCloud: the AntCloud session submits this PIN to the backend, which enters it into Sunshine.
++        [[NSNotificationCenter defaultCenter] postNotificationName:@"AntCloudPairingPIN" object:nil userInfo:@{@"pin": PIN}];
+     });
+ }
+ 
+@@ -938,6 +948,15 @@ - (void)viewDidLoad
+     
+     // Get callbacks associated with the viewController
+     [self.revealViewController setDelegate:self];
++
++    // AntCloud: button to reopen the AntCloud panel, and the hook it uses to connect.
++    UIBarButtonItem* antCloudButton = [[UIBarButtonItem alloc] initWithTitle:@"AntCloud"
++                                                                       style:UIBarButtonItemStylePlain
++                                                                      target:self
++                                                                      action:@selector(showAntCloud)];
++    NSMutableArray* rightItems = [self.navigationItem.rightBarButtonItems mutableCopy] ?: [NSMutableArray array];
++    [rightItems addObject:antCloudButton];
++    self.navigationItem.rightBarButtonItems = rightItems;
+     
+     // Disable bounce-back on reveal VC otherwise the settings will snap closed
+     // if the user drags all the way off the screen opposite the settings pane.
+@@ -1109,7 +1128,22 @@ - (void)viewDidAppear:(BOOL)animated
+     
+     // Check for a pending shortcut action when appearing
+     [self handlePendingShortcutAction];
+-    
++
++#if !TARGET_OS_TV
++    // AntCloud: open straight into the AntCloud panel on launch. When the panel closes after
++    // Play, it leaves the cloud PC's address for us (a notification would be lost, since
++    // viewDidDisappear removes all of our observers while the panel covers us).
++    if (!_antCloudShownOnLaunch) {
++        _antCloudShownOnLaunch = YES;
++        [self showAntCloud];
++    } else {
++        NSString* pending = ((NSString* (*)(id, SEL))objc_msgSend)(NSClassFromString(@"AntCloudPanel"), NSSelectorFromString(@"takePendingConnectAddress"));
++        if (pending != nil) {
++            [self antCloudConnectToAddress:pending];
++        }
++    }
++#endif
++
+     [[NSNotificationCenter defaultCenter] addObserver: self
+                                              selector: @selector(handleReturnToForeground)
+                                                  name: UIApplicationDidBecomeActiveNotification
+@@ -1341,6 +1375,89 @@ - (void) updateAppsForHost:(TemporaryHost*)host {
+     
+     [hostScrollView removeFromSuperview];
+     [self.collectionView reloadData];
++
++    // AntCloud: once the cloud PC's apps are known, start "Desktop" (after the loading frame is gone).
++    if (_antCloudLaunchAddress != nil && [self antCloudHost:host matchesAddress:_antCloudLaunchAddress]) {
++        _antCloudLaunchAddress = nil;
++        TemporaryApp* desktop = nil;
++        for (TemporaryApp* app in host.appList) {
++            if ([app.name caseInsensitiveCompare:@"Desktop"] == NSOrderedSame) {
++                desktop = app;
++                break;
++            }
++        }
++        if (desktop != nil) {
++            dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.8 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
++                [self appClicked:desktop view:nil];
++            });
++        }
++    }
++}
++
++#pragma mark - AntCloud
++
++- (BOOL) antCloudHost:(TemporaryHost*)host matchesAddress:(NSString*)address {
++    return [host.address isEqualToString:address] || [host.activeAddress isEqualToString:address] ||
++           [host.localAddress isEqualToString:address] || [host.externalAddress isEqualToString:address];
++}
++
++- (void) showAntCloud {
++    Class panel = NSClassFromString(@"AntCloudPanel");
++    if (panel == nil) {
++        return;
++    }
++    UIViewController* controller = ((UIViewController* (*)(id, SEL))objc_msgSend)(panel, NSSelectorFromString(@"makeViewController"));
++    [[self activeViewController] presentViewController:controller animated:YES completion:nil];
++}
++
++// Requested by the AntCloud panel's Play button: add the cloud PC if needed, pair (the PIN is
++// submitted automatically), then auto-launch "Desktop".
++- (void) antCloudConnectToAddress:(NSString*)address {
++    NSLog(@"[AntCloud] connect requested for %@ (%lu known hosts)", address, (unsigned long)hostList.count);
++    if (address.length == 0) {
++        return;
++    }
++    _antCloudLaunchAddress = address;
++
++    TemporaryHost* existing = nil;
++    @synchronized(hostList) {
++        for (TemporaryHost* host in hostList) {
++            if ([self antCloudHost:host matchesAddress:address]) {
++                existing = host;
++                break;
++            }
++        }
++    }
++    if (existing != nil) {
++        NSLog(@"[AntCloud] using saved host %@ (state %d, pair state %d)", existing.name, existing.state, existing.pairState);
++        [self hostClicked:existing view:self.view];
++        return;
++    }
++    NSLog(@"[AntCloud] adding host %@", address);
++
++    [self showLoadingFrame:^{
++        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_HIGH, 0), ^{
++            [self->_discMan discoverHost:address withCallback:^(TemporaryHost* host, NSString* error) {
++                dispatch_async(dispatch_get_main_queue(), ^{
++                    NSLog(@"[AntCloud] discover %@ → %@", address, host != nil ? host.name : error);
++                    [self hideLoadingFrame:^{
++                        if (host == nil) {
++                            self->_antCloudLaunchAddress = nil;
++                            UIAlertController* alert = [UIAlertController alertControllerWithTitle:@"Couldn't Reach Cloud PC" message:error preferredStyle:UIAlertControllerStyleAlert];
++                            [alert addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:nil]];
++                            [[self activeViewController] presentViewController:alert animated:YES completion:nil];
++                            return;
++                        }
++                        @synchronized(hostList) {
++                            [hostList addObject:host];
++                        }
++                        [self updateHosts];
++                        [self hostClicked:host view:self.view];
++                    }];
++                });
++            }];
++        });
++    }];
+ }
+ 
+ - (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath {

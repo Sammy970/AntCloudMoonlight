@@ -343,6 +343,12 @@ struct AntCloudHomeView: View {
                 // Moonlight's main screen picks this up in viewDidAppear once the panel is gone.
                 AntCloudPanel.pendingConnectAddress = host
                 dismiss()
+                // The in-stream overlay (time left, health warnings) appears once the panel is gone.
+                let profile = auth.profile
+                Task {
+                    try? await Task.sleep(for: .seconds(0.6))
+                    StreamOverlayWindow.shared.begin(host: host, profile: profile)
+                }
             } catch {
                 Log.info("[panel] play failed: \(error.localizedDescription)")
                 session.notice = .init(title: "Couldn't Connect", message: error.localizedDescription)

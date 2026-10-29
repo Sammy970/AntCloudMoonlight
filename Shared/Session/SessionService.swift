@@ -53,6 +53,8 @@ final class SessionService: ObservableObject {
 
     @Published private(set) var phase: Phase = .idle
     @Published var notice: Notice?
+    /// The cloud PC's address while a launch or stream is running (for the in-stream overlay).
+    @Published private(set) var streamHost: String?
 
     /// Fired when the server says the token is no longer valid.
     var onSessionExpired: (() -> Void)?
@@ -202,12 +204,14 @@ final class SessionService: ObservableObject {
             guard let self else { return }
             do {
                 let host = try await api.vmIP()
+                streamHost = host
                 applySettings(settings)
                 try await driver.run(host: host, settings: settings, session: self)
             } catch is CancellationError {
             } catch {
                 notice = Notice(title: "Stream Error", message: error.localizedDescription)
             }
+            streamHost = nil
             if phase == .pairing || phase == .streaming { phase = .ready }
         }
     }
@@ -333,6 +337,7 @@ final class SessionService: ObservableObject {
         socket?.removeAllHandlers()
         socket = nil
         manager = nil
+        streamHost = nil
         phase = .idle
     }
 }

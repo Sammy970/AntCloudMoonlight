@@ -21,8 +21,8 @@ final class NetworkCheck: ObservableObject {
     @Published private(set) var liveMbps: Double = 0
 
     static let sampleCount = 20
-    private static let latencyHost = "socket.antcloud.co"
-    private static let latencyPort: NWEndpoint.Port = 8000
+    nonisolated static let latencyHost = "socket.antcloud.co"
+    nonisolated static let latencyPort: NWEndpoint.Port = 8000
     private static let downloadURL = URL(string: "https://speed.cloudflare.com/__down?bytes=50000000")!
 
     var isRunning: Bool { stage == .latency || stage == .download }
@@ -94,9 +94,10 @@ final class NetworkCheck: ObservableObject {
     }
 
     /// Time from starting a TCP connection to it being ready: one network round trip.
-    private static func handshakeTime() async -> Double? {
+    /// Defaults to AntCloud's socket server; the stream monitor points it at the cloud PC.
+    nonisolated static func handshakeTime(host: String = latencyHost, port: NWEndpoint.Port = latencyPort) async -> Double? {
         await withCheckedContinuation { continuation in
-            let connection = NWConnection(host: NWEndpoint.Host(latencyHost), port: latencyPort, using: .tcp)
+            let connection = NWConnection(host: NWEndpoint.Host(host), port: port, using: .tcp)
             let start = DispatchTime.now()
             let finished = OSAllocatedUnfairLock(initialState: false)
             @Sendable func finish(_ value: Double?) {

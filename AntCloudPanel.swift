@@ -56,6 +56,8 @@ private final class PanelHostingController: UIHostingController<AnyView> {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
+        // Back in AntCloud: the stream (and its overlay) is over.
+        StreamOverlayWindow.shared.end()
         AntCloudStore.shared.panelVisible = true
         AntCloudPanel.applyOrientation()
     }

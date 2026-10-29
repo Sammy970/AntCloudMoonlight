@@ -38,6 +38,8 @@ does the streaming underneath; you never see its host list or settings.
 - **Network check** before you start: latency to AntCloud's servers, jitter, packet loss and download speed,
   with a verdict and a one-tap bitrate suggestion.
 - **Night plans checked up front:** outside 12:30–9:30 AM IST the app says so before it boots anything.
+- **In-stream overlay:** a small pill at the top of the stream shows time left and latency; tap it for the
+  full card. It warns you when the cloud PC's connection gets busy and when plan time runs low.
 - **Liquid Glass on iOS 26+,** with a soft aurora behind it, purposeful motion and haptics. Reduce Motion is respected.
   iOS 17–25 get a frosted-material version of the same design.
 - **Expiry reminder:** free Apple ID builds last 7 days; the app shows the exact date and reminds you the day before.

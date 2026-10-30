@@ -13,6 +13,7 @@ struct AntCloudHomeView: View {
     @State private var prefs = MoonlightPrefs.load()
     @State private var showingSettings = false
     @State private var showingNetwork = false
+    @State private var showingAbout = false
     /// Kept here so the card can show the last result.
     @StateObject private var networkCheck = NetworkCheck()
 
@@ -68,6 +69,22 @@ struct AntCloudHomeView: View {
                         appCard.reveal(0.36)
                     }
                 }
+
+                Button { showingAbout = true } label: {
+                    HStack(spacing: 6) {
+                        Text("\(Config.appName) \(Config.appVersion)")
+                        Text("·")
+                        Text("Made by \(Config.creatorName)").fontWeight(.semibold)
+                    }
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 14)
+                    .glassCapsule()
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 22)
+                .reveal(0.42)
             }
             .padding(.horizontal, 20)
             .padding(.top, 8)
@@ -94,6 +111,19 @@ struct AntCloudHomeView: View {
         .sensoryFeedback(.selection, trigger: prefs)
         .sheet(isPresented: $showingSettings) {
             StreamSettingsSheet(prefs: $prefs)
+        }
+        .sheet(isPresented: $showingAbout) {
+            NavigationStack {
+                ScrollView { AboutView() }
+                    .background { AuroraBackground(intensity: 0.35) }
+                    .navigationTitle("About")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Done") { showingAbout = false }
+                        }
+                    }
+            }
         }
         .sheet(isPresented: $showingNetwork) {
             NavigationStack {
@@ -314,6 +344,7 @@ struct AntCloudHomeView: View {
                 if let email = auth.profile?.email { Text(email) }
                 Button("Refresh Account", systemImage: "arrow.clockwise") { Task { await auth.reloadProfile() } }
                 Button("Plans & Pricing", systemImage: "creditcard") { openURL(Config.pricingURL) }
+                Button("About", systemImage: "info.circle") { showingAbout = true }
                 Divider()
                 Button("Log Out", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) {
                     session.shutDown()

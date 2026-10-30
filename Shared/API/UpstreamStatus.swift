@@ -10,9 +10,9 @@ import SwiftUI
 final class UpstreamStatus: ObservableObject {
     static let shared = UpstreamStatus()
 
-    /// The Windows client version whose API routes these apps match (re/FINDINGS.md).
-    /// Bump it after updating `APIClient` for a new AntCloud release.
-    static let matchedClientVersion = 0.016
+    /// The Windows client version whose API routes these apps match, from `Config.appVersion`
+    /// (re/FINDINGS.md has the routes). Bump `appVersion` after updating `APIClient` for a new AntCloud release.
+    static var matchedClientVersion: Double { Config.matchedClientVersion }
 
     /// AntCloud's current Windows client version, when it's newer than the one we match.
     @Published private(set) var newerClientVersion: Double?

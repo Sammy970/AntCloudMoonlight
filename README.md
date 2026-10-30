@@ -8,6 +8,7 @@
 AntCloud built into the open-source Moonlight client: one app, automatic pairing, no addresses or PINs to type.
 
 <p>
+  <img src="https://img.shields.io/badge/version-0.16.0-4A86E8?style=flat-square" alt="Version 0.16.0">
   <img src="https://img.shields.io/badge/iOS-17%2B%20·%20glass%20on%2026%2B-111111?style=flat-square&logo=apple&logoColor=white" alt="iOS 26+">
   <img src="https://img.shields.io/badge/Swift-5-F05138?style=flat-square&logo=swift&logoColor=white" alt="Swift">
   <img src="https://img.shields.io/badge/UI-Liquid%20Glass-4A86E8?style=flat-square" alt="Liquid Glass">
@@ -109,6 +110,24 @@ AntCloud panel ── Start ──▶ Socket.IO session queues and boots the clo
 | `integrate-moonlight.rb` | Wires everything into a Moonlight checkout |
 | `scripts/renew-and-install.sh` | Renews the signing profile, builds and installs |
 | `Assets/`, `AntCloudLogo.png`, `AppIcon-1024.png` | Launch screen colour and logo, sign-in logo, app icon |
+
+## Made by
+
+<table>
+  <tr>
+    <td width="96" valign="middle"><a href="https://github.com/Sammy970"><img src="https://github.com/Sammy970.png?size=192" width="88" alt="Samyak Jain"></a></td>
+    <td valign="middle">
+      <b>Samyak Jain</b><br>
+      <sub>Designed and built AntCloud for iPhone and Mac, from reverse-engineering AntCloud's Windows app to the last animation.</sub><br><br>
+      <a href="https://github.com/Sammy970"><img src="https://img.shields.io/badge/GitHub-@Sammy970-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub @Sammy970"></a>
+      <a href="https://x.com/Sammy_970"><img src="https://img.shields.io/badge/X-@Sammy__970-000000?style=for-the-badge&logo=x&logoColor=white" alt="X @Sammy_970"></a>
+    </td>
+  </tr>
+</table>
+
+If this helped you play on a Mac or iPhone, a ⭐ on the repo or a hello on X is always welcome.
+
+The same credits live in the app: tap the footer on the home screen, or ⋯ → About.
 
 ## Notes
 

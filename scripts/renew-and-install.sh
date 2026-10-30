@@ -92,11 +92,16 @@ if (( integrate )); then
   ruby "$here/integrate-moonlight.rb" "$MOONLIGHT"
 fi
 
-step "Building (this takes a minute or two)"
+# Our version (Config.appVersion, 0.<AntCloud release>.<ours>) replaces Moonlight's; build number = commit count.
+VERSION=$(sed -nE 's/.*static let appVersion = "([0-9.]+)".*/\1/p' "$here/Shared/Config.swift")
+BUILD=$(git -C "$here" rev-list --count HEAD 2>/dev/null || echo 1)
+
+step "Building AntCloud $VERSION (this takes a minute or two)"
 log="$(mktemp)"
 if ! xcodebuild -project "$MOONLIGHT/Moonlight.xcodeproj" -scheme Moonlight -configuration Debug \
     -destination 'generic/platform=iOS' -derivedDataPath "$MOONLIGHT/build" -allowProvisioningUpdates \
-    DEVELOPMENT_TEAM="$TEAM_ID" PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" build >"$log" 2>&1; then
+    DEVELOPMENT_TEAM="$TEAM_ID" PRODUCT_BUNDLE_IDENTIFIER="$BUNDLE_ID" \
+    MARKETING_VERSION="$VERSION" CURRENT_PROJECT_VERSION="$BUILD" build >"$log" 2>&1; then
   grep -E "error:" "$log" | head -20 >&2
   echo "Build failed. Full log: $log" >&2
   exit 1

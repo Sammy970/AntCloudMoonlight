@@ -41,8 +41,7 @@ does the streaming underneath; you never see its host list or settings.
 - **In-stream overlay:** a small pill at the top of the stream shows time left and latency; tap it for the
   full card. It warns you when the cloud PC's connection gets busy and when plan time runs low.
 - **Knows when AntCloud changes things:** a banner appears when AntCloud ships a newer Windows app than this code
-  matches, and a clear message replaces bare errors if a route disappears. A daily check in
-  [AntCloudMac](https://github.com/Sammy970/AntCloudMac) watches the API for both apps.
+  matches, and a clear message replaces bare errors if a route disappears.
 - **Liquid Glass on iOS 26+,** with a soft aurora behind it, purposeful motion and haptics. Reduce Motion is respected.
   iOS 17–25 get a frosted-material version of the same design.
 - **Expiry reminder:** free Apple ID builds last 7 days; the app shows the exact date and reminds you the day before.

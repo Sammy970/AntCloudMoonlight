@@ -13,10 +13,11 @@ AntCloud built into the open-source Moonlight client: one app, automatic pairing
   <img src="https://img.shields.io/badge/Swift-5-F05138?style=flat-square&logo=swift&logoColor=white" alt="Swift">
   <img src="https://img.shields.io/badge/UI-Liquid%20Glass-4A86E8?style=flat-square" alt="Liquid Glass">
   <img src="https://img.shields.io/badge/streams%20with-Moonlight-5A0FC8?style=flat-square" alt="Streams with Moonlight">
+  <img src="https://img.shields.io/badge/licence-GPLv3-555555?style=flat-square" alt="GPLv3">
   <img src="https://img.shields.io/badge/unofficial-not%20affiliated%20with%20AntCloud-B42318?style=flat-square" alt="Unofficial">
 </p>
 
-<p><a href="#what-it-does">What it does</a> &nbsp;·&nbsp; <a href="#build-and-install">Build and install</a> &nbsp;·&nbsp; <a href="#renewing-every-7-days">Renewing every 7 days</a> &nbsp;·&nbsp; <a href="#how-it-works">How it works</a></p>
+<p><a href="#install-with-sidestore-no-xcode-needed"><b>Install</b></a> &nbsp;·&nbsp; <a href="#what-it-does">What it does</a> &nbsp;·&nbsp; <a href="#build-and-install">Build and install</a> &nbsp;·&nbsp; <a href="#renewing-every-7-days">Renewing every 7 days</a> &nbsp;·&nbsp; <a href="#how-it-works">How it works</a></p>
 
 </div>
 
@@ -47,7 +48,20 @@ does the streaming underneath; you never see its host list or settings.
   iOS 17–25 get a frosted-material version of the same design.
 - **Expiry reminder:** free Apple ID builds last 7 days; the app shows the exact date and reminds you the day before.
 
+## Install with SideStore (no Xcode needed)
+
+**[Download AntCloud-0.16.0.ipa](https://github.com/Sammy970/AntCloudMoonlight/releases/latest)**: unsigned, so it
+contains nothing personal, and you sign it with your own Apple ID.
+
+1. Set up [SideStore](https://sidestore.io) on your iPhone (a one-time setup with a computer; their guide walks you
+   through it). [AltStore](https://altstore.io) and [Sideloadly](https://sideloadly.io) work too.
+2. Download the IPA on your iPhone, then in SideStore go to **My Apps → +** and pick it.
+3. SideStore signs it with your Apple ID and installs it. It re-signs it every 7 days in the background, so it keeps
+   working. On a free Apple ID it uses one of your three app slots.
+
 ## Build and install
+
+Or build it yourself and install it from your Mac:
 
 You need Xcode, an Apple ID for signing (a free one works), and the
 [`xcodeproj`](https://github.com/CocoaPods/Xcodeproj) gem.
@@ -132,5 +146,6 @@ The same credits live in the app: tap the footer on the home screen, or ⋯ → 
 ## Notes
 
 Unofficial client, not affiliated with AntCloud. [Moonlight](https://github.com/moonlight-stream/moonlight-ios)
-is GPLv3; this repo ships only the AntCloud additions and a patch, never Moonlight's source.
+is GPLv3, and so is this repo (see [LICENSE](LICENSE)), since the iPhone app is Moonlight with these additions.
+The source here is the AntCloud additions and a patch, never Moonlight's own source; the IPA is built from both.
 `Shared/` is copied from [AntCloudMac](https://github.com/Sammy970/AntCloudMac); keep the two in sync.

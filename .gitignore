@@ -21,3 +21,6 @@ moonlight-ios/
 
 # Local signing settings for scripts/renew-and-install.sh
 scripts/renew.env
+
+# Unsigned IPA from scripts/make-ipa.sh
+dist/

@@ -49,6 +49,10 @@ struct UserProfile {
 
 /// Thin client for https://api.antcloud.co/api. Responses are loosely shaped, so JSON is
 /// handled as dictionaries rather than strict Codable models.
+///
+/// Routes match AntCloud's Windows client v0.016 (`UpstreamStatus.matchedClientVersion`); that
+/// release renamed every route, see re/FINDINGS.md. A route AntCloud removes answers Express's
+/// "Cannot GET /api/…" 404, which `send` reports as a service change rather than a plain error.
 final class APIClient {
     var accessToken: String?
     /// Called once on a 401 to obtain a new access token; returns nil if refresh failed.
@@ -59,16 +63,16 @@ final class APIClient {
     // MARK: Auth
 
     func login(email: String, password: String) async throws -> (access: String, refresh: String?) {
-        let json = try await send("POST", "users/login", body: ["email": email, "password": password])
+        let json = try await send("POST", "login", body: ["user": email, "auth": password])
         return try Self.tokens(from: json)
     }
 
     func sendOTP(phone: String) async throws {
-        _ = try await send("POST", "phone/otp", body: ["phone": phone, "signup": false])
+        _ = try await send("POST", "phoneNumber/otp", body: ["mobile": phone, "register": false])
     }
 
     func phoneLogin(phone: String, otp: String) async throws -> (access: String, refresh: String?) {
-        let json = try await send("POST", "users/phone/login", body: ["phone": phone, "_verificationToken": otp])
+        let json = try await send("POST", "phoneLogin", body: ["mobile": phone, "verificationToken": otp])
         return try Self.tokens(from: json)
     }
 
@@ -77,7 +81,7 @@ final class APIClient {
     }
 
     func refresh(refreshToken: String) async throws -> (access: String, refresh: String?) {
-        let json = try await send("GET", "users/refresh", headers: ["refresh": "JWT \(refreshToken)"]) as? [String: Any]
+        let json = try await send("GET", "users/refreshToken", headers: ["refresh": "JWT \(refreshToken)"]) as? [String: Any]
         guard let access = json?["accessToken"] as? String, !access.isEmpty else {
             throw APIError(status: 0, message: "Session expired. Please log in again.")
         }
@@ -85,9 +89,10 @@ final class APIClient {
     }
 
     func me() async throws -> UserProfile {
-        let json = try await send("GET", "users/me", authorized: true) as? [String: Any]
+        let json = try await send("GET", "myself", authorized: true) as? [String: Any]
+        // An expired or unknown token gets 200 {"user": null} rather than an error.
         guard let user = json?["user"] as? [String: Any] else {
-            throw APIError(status: 0, message: "Unexpected profile response.")
+            throw APIError(status: 401, message: "Session expired. Please log in again.")
         }
         return UserProfile(json: user)
     }
@@ -95,7 +100,7 @@ final class APIClient {
     // MARK: VM
 
     func vmIP() async throws -> String {
-        let json = try await send("GET", "vm/getVmIp", authorized: true) as? [String: Any]
+        let json = try await send("GET", "vm/getControllVmIp", authorized: true) as? [String: Any]
         guard let ip = json?["vmip"] as? String, !ip.isEmpty else {
             throw APIError(status: 0, message: "VM IP not available yet.")
         }
@@ -104,7 +109,7 @@ final class APIClient {
 
     /// Hands the Moonlight pairing PIN to the backend, which enters it into Sunshine on the VM.
     func vmAuth(pin: String) async throws -> Bool {
-        let json = try await send("POST", "vm/vmauth", body: ["pin": pin], authorized: true)
+        let json = try await send("POST", "vm/vmAuthentication", body: ["code": pin], authorized: true)
         if let ok = json as? Bool { return ok }
         if let dict = json as? [String: Any] {
             // Current server shape: {"message":"success","data":{"status":true|false}}
@@ -117,8 +122,15 @@ final class APIClient {
     }
 
     func connectionStatus() async throws -> Bool {
-        let json = try await send("GET", "vm/checkconnectionstatus", authorized: true) as? [String: Any]
+        let json = try await send("GET", "vm/checkVmConnectionStatus", authorized: true) as? [String: Any]
         return json?["connected"] as? Bool ?? false
+    }
+
+    /// Latest version of AntCloud's Windows client. A rise past `UpstreamStatus.matchedClientVersion`
+    /// has so far meant renamed API routes.
+    func windowsClientVersion() async -> Double? {
+        guard let json = try? await send("GET", "windows/version") as? [String: Any] else { return nil }
+        return (json["version"] as? NSNumber)?.doubleValue ?? (json["version"] as? String).flatMap(Double.init)
     }
 
     /// Server clock (IST), used for night-plan windows.
@@ -149,10 +161,16 @@ final class APIClient {
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         let json = try? JSONSerialization.jsonObject(with: data, options: [.fragmentsAllowed])
         // Poll endpoints are logged only when something is off; auth bodies are never logged.
-        // checkconnectionstatus answers 400 {"connected":false} until Moonlight connects — expected, so not logged.
-        if path != "vm/checkconnectionstatus" {
-            let preview = path.hasPrefix("users/") || path.hasPrefix("phone/") ? "" : " " + String(decoding: data.prefix(300), as: UTF8.self)
+        // checkVmConnectionStatus answers 400 {"connected":false} until Moonlight connects — expected, so not logged.
+        if path != "vm/checkVmConnectionStatus" {
+            let preview = Self.authPaths.contains(where: path.hasPrefix) ? "" : " " + String(decoding: data.prefix(300), as: UTF8.self)
             Log.info("[api] \(method) \(path) → \(status)\(preview)")
+        }
+
+        if status == 404, String(decoding: data.prefix(400), as: UTF8.self).contains("<pre>Cannot \(method) /api/") {
+            Log.info("[api] \(method) \(path) no longer exists on AntCloud's server")
+            await UpstreamStatus.shared.markRouteMissing("\(method) \(path)")
+            throw APIError(status: status, message: "AntCloud changed their service, so this no longer works. This app needs an update.")
         }
 
         if status == 401, authorized, !isRetry, let refreshHandler, let fresh = await refreshHandler() {
@@ -180,6 +198,10 @@ final class APIClient {
             let messages = errors.compactMap { $0["message"] as? String }
             if !messages.isEmpty { return messages.joined(separator: "\n") }
         }
-        return (dict["error"] as? String) ?? (dict["message"] as? String)
+        // {"error":"Validation Error!","message":"Please Enter Valid Phone Number"}: the message is the useful part.
+        return (dict["message"] as? String) ?? (dict["error"] as? String)
     }
+
+    /// Requests whose bodies (tokens, profile) are never logged.
+    private static let authPaths = ["login", "phoneLogin", "phoneNumber/", "myself", "users/"]
 }

@@ -110,6 +110,8 @@ struct LoginView: View {
 
     private var card: some View {
         VStack(spacing: 20) {
+            UpstreamBanner()
+
             VStack(spacing: 4) {
                 Text("Sign in").font(.title2.weight(.semibold))
                 Text("Use your AntCloud account.").foregroundStyle(.secondary)

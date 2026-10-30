@@ -35,7 +35,7 @@ target = project.targets.find { |t| t.name == 'Moonlight' } or abort 'Moonlight 
 # 2. Add Swift sources: the panel files here, plus the Shared code (minus RootView — the panel
 #    supplies its own root). Files are referenced in place from this repo.
 shared = %w[
-  Config.swift Log.swift API/APIClient.swift Auth/AuthStore.swift Auth/Keychain.swift
+  Config.swift Log.swift API/APIClient.swift API/UpstreamStatus.swift Auth/AuthStore.swift Auth/Keychain.swift
   Session/SessionService.swift Session/StreamSettings.swift Session/NetworkCheck.swift Session/StreamHealth.swift
   Views/LoginView.swift Views/PlatformStyles.swift Views/SessionViews.swift Views/NetworkCheckView.swift Views/StreamOverlayViews.swift
 ].map { |f| File.join(here, 'Shared', f) }

@@ -24,6 +24,9 @@ struct AntCloudHomeView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 0) {
+                UpstreamBanner()
+                    .padding(.bottom, 14)
+
                 header
                     .reveal(0)
                     .padding(.bottom, 20)

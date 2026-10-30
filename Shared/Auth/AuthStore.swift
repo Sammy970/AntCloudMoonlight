@@ -25,6 +25,8 @@ final class AuthStore: ObservableObject {
     #endif
 
     func restore() async {
+        // Checks in the background whether AntCloud has shipped a newer client (and maybe new API routes).
+        Task { await UpstreamStatus.shared.check(api: api) }
         guard Keychain.get(Self.refreshAccount) != nil, await refreshAccessToken() != nil else {
             state = .loggedOut
             return

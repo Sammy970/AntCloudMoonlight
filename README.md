@@ -8,7 +8,7 @@
 AntCloud built into the open-source Moonlight client: one app, automatic pairing, no addresses or PINs to type.
 
 <p>
-  <img src="https://img.shields.io/badge/version-0.16.0-4A86E8?style=flat-square" alt="Version 0.16.0">
+  <img src="https://img.shields.io/badge/version-0.16.1-4A86E8?style=flat-square" alt="Version 0.16.0">
   <img src="https://img.shields.io/badge/iOS-17%2B%20·%20glass%20on%2026%2B-111111?style=flat-square&logo=apple&logoColor=white" alt="iOS 26+">
   <img src="https://img.shields.io/badge/Swift-5-F05138?style=flat-square&logo=swift&logoColor=white" alt="Swift">
   <img src="https://img.shields.io/badge/UI-Liquid%20Glass-4A86E8?style=flat-square" alt="Liquid Glass">
@@ -39,6 +39,8 @@ does the streaming underneath; you never see its host list or settings.
   trackpad or direct touch, on-screen controls, stats overlay and where the sound plays. They're saved straight into Moonlight.
 - **Network check** before you start: latency to AntCloud's servers, jitter, packet loss and download speed,
   with a verdict and a one-tap bitrate suggestion.
+- **Controller check:** a drawn controller mirrors every press, stick and trigger of your controller live, with its
+  type, battery, exact stick values and a vibration test, so you know it'll work before you start the cloud PC.
 - **Night plans checked up front:** outside 12:30–9:30 AM IST the app says so before it boots anything.
 - **In-stream overlay:** a small pill at the top of the stream shows time left and latency; tap it for the
   full card. It warns you when the cloud PC's connection gets busy and when plan time runs low.
@@ -47,6 +49,11 @@ does the streaming underneath; you never see its host list or settings.
 - **Liquid Glass on iOS 26+,** with a soft aurora behind it, purposeful motion and haptics. Reduce Motion is respected.
   iOS 17–25 get a frosted-material version of the same design.
 - **Expiry reminder:** free Apple ID builds last 7 days; the app shows the exact date and reminds you the day before.
+
+<p align="center">
+  <picture><source media="(prefers-color-scheme: dark)" srcset=".github/screenshots/dark-controllers.png"><img src=".github/screenshots/light-controllers.png" width="320" alt="The controller check: a drawn Xbox controller with the A button and right bumper lit, the right trigger at 70%, and a Ready badge"></picture>
+  <br><sub>The controller check, from the Controller check card on the home screen.</sub>
+</p>
 
 ## Install with SideStore (no Xcode needed)
 

@@ -8,7 +8,7 @@
 AntCloud built into the open-source Moonlight client: one app, automatic pairing, no addresses or PINs to type.
 
 <p>
-  <img src="https://img.shields.io/badge/version-0.16.1-4A86E8?style=flat-square" alt="Version 0.16.0">
+  <img src="https://img.shields.io/badge/version-0.16.2-4A86E8?style=flat-square" alt="Version 0.16.0">
   <img src="https://img.shields.io/badge/iOS-17%2B%20·%20glass%20on%2026%2B-111111?style=flat-square&logo=apple&logoColor=white" alt="iOS 26+">
   <img src="https://img.shields.io/badge/Swift-5-F05138?style=flat-square&logo=swift&logoColor=white" alt="Swift">
   <img src="https://img.shields.io/badge/UI-Liquid%20Glass-4A86E8?style=flat-square" alt="Liquid Glass">

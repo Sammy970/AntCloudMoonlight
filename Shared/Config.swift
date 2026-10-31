@@ -25,7 +25,7 @@ enum Config {
     /// 0.016, whose API routes `APIClient` uses. Bump the middle number after updating `APIClient` for a new
     /// AntCloud release (0.17.0 for their 0.017), and the last one for our own changes. The build scripts
     /// stamp this into the app bundles, and the upstream check compares against it.
-    static let appVersion = "0.16.1"
+    static let appVersion = "0.16.2"
 
     /// The AntCloud Windows client version this build matches, read from `appVersion` (0.16.x → 0.016).
     static var matchedClientVersion: Double {

@@ -1,16 +1,46 @@
 diff --git a/Limelight/AppDelegate.m b/Limelight/AppDelegate.m
-index 5db73f5..836aded 100644
+index 5db73f5..b036377 100644
 --- a/Limelight/AppDelegate.m
 +++ b/Limelight/AppDelegate.m
-@@ -7,6 +7,7 @@
+@@ -7,6 +7,37 @@
  //
  
  #import "AppDelegate.h"
 +#import <objc/message.h>
++
++// AntCloud: iOS 27 refuses to launch apps built with its SDK that don't use the UIScene life cycle. UIKit still
++// builds the window from the storyboard named in Info.plist (UISceneStoryboardFile); this delegate is what scene
++// apps use to receive the home-screen shortcuts that the app delegate used to get.
++@interface AntCloudSceneDelegate : UIResponder <UIWindowSceneDelegate>
++@property (strong, nonatomic) UIWindow *window;
++@end
++
++@implementation AntCloudSceneDelegate
++
++#if !TARGET_OS_TV
++- (void)scene:(UIScene *)scene willConnectToSession:(UISceneSession *)session options:(UISceneConnectionOptions *)connectionOptions {
++    UIApplicationShortcutItem* shortcut = connectionOptions.shortcutItem;
++    if (shortcut != nil) {
++        ((AppDelegate*)UIApplication.sharedApplication.delegate).pcUuidToLoad = (NSString*)[shortcut.userInfo objectForKey:@"UUID"];
++    }
++}
++
++- (void)windowScene:(UIWindowScene *)windowScene performActionForShortcutItem:(UIApplicationShortcutItem *)shortcutItem completionHandler:(void (^)(BOOL succeeded))completionHandler {
++    AppDelegate* app = (AppDelegate*)UIApplication.sharedApplication.delegate;
++    app.pcUuidToLoad = (NSString*)[shortcutItem.userInfo objectForKey:@"UUID"];
++    app.shortcutCompletionHandler = completionHandler;
++}
++#endif
++
++- (void)sceneDidEnterBackground:(UIScene *)scene {
++    [(AppDelegate*)UIApplication.sharedApplication.delegate saveContext];
++}
++
++@end
  
  @implementation AppDelegate
  
-@@ -22,6 +23,12 @@ @implementation AppDelegate
+@@ -22,6 +53,12 @@ @implementation AppDelegate
  static NSString* DB_NAME = @"Limelight_iOS.sqlite";
  #endif
  
@@ -24,7 +54,7 @@ index 5db73f5..836aded 100644
  #if !TARGET_OS_TV
      UIApplicationShortcutItem* shortcut = [launchOptions valueForKey:UIApplicationLaunchOptionsShortcutItemKey];
 diff --git a/Limelight/Limelight-Info.plist b/Limelight/Limelight-Info.plist
-index 963c433..dba04a9 100644
+index 963c433..56a4e51 100644
 --- a/Limelight/Limelight-Info.plist
 +++ b/Limelight/Limelight-Info.plist
 @@ -9,7 +9,7 @@
@@ -53,12 +83,16 @@ index 963c433..dba04a9 100644
  	<key>NSAppTransportSecurity</key>
  	<dict>
  		<key>NSAllowsArbitraryLoads</key>
-@@ -60,8 +60,13 @@
+@@ -60,12 +60,34 @@
  	<string>Moonlight uses the local network to connect to your gaming PC for streaming.</string>
  	<key>UIApplicationSupportsIndirectInputEvents</key>
  	<true/>
 -	<key>UILaunchStoryboardName</key>
 -	<string>Launch Screen</string>
+-	<key>UIMainStoryboardFile</key>
+-	<string>iPhone</string>
+-	<key>UIMainStoryboardFile~ipad</key>
+-	<string>iPad</string>
 +	<key>UILaunchScreen</key>
 +	<dict>
 +		<key>UIColorName</key>
@@ -66,10 +100,31 @@ index 963c433..dba04a9 100644
 +		<key>UIImageName</key>
 +		<string>AntCloudLaunchLogo</string>
 +	</dict>
- 	<key>UIMainStoryboardFile</key>
- 	<string>iPhone</string>
- 	<key>UIMainStoryboardFile~ipad</key>
-@@ -76,6 +81,7 @@
++	<key>UIApplicationSceneManifest</key>
++	<dict>
++		<key>UIApplicationSupportsMultipleScenes</key>
++		<false/>
++		<key>UISceneConfigurations</key>
++		<dict>
++			<key>UIWindowSceneSessionRoleApplication</key>
++			<array>
++				<dict>
++					<key>UISceneConfigurationName</key>
++					<string>Default Configuration</string>
++					<key>UISceneDelegateClassName</key>
++					<string>AntCloudSceneDelegate</string>
++					<key>UISceneStoryboardFile</key>
++					<string>iPhone</string>
++					<key>UISceneStoryboardFile~ipad</key>
++					<string>iPad</string>
++				</dict>
++			</array>
++		</dict>
++	</dict>
+ 	<key>UIRequiredDeviceCapabilities</key>
+ 	<array>
+ 		<string>armv7</string>
+@@ -76,6 +98,7 @@
  	<true/>
  	<key>UISupportedInterfaceOrientations</key>
  	<array>
@@ -77,7 +132,7 @@ index 963c433..dba04a9 100644
  		<string>UIInterfaceOrientationLandscapeLeft</string>
  		<string>UIInterfaceOrientationLandscapeRight</string>
  	</array>
-@@ -83,6 +89,7 @@
+@@ -83,6 +106,7 @@
  	<array>
  		<string>UIInterfaceOrientationLandscapeLeft</string>
  		<string>UIInterfaceOrientationLandscapeRight</string>

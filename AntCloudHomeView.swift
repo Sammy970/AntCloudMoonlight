@@ -14,6 +14,9 @@ struct AntCloudHomeView: View {
     @State private var showingSettings = false
     @State private var showingNetwork = false
     @State private var showingAbout = false
+    @State private var showingControllers = false
+    /// Watches controllers for the controller-check card and sheet.
+    @StateObject private var gamepads = GamepadMonitor()
     /// Kept here so the card can show the last result.
     @StateObject private var networkCheck = NetworkCheck()
 
@@ -66,6 +69,7 @@ struct AntCloudHomeView: View {
                     VStack(spacing: 14) {
                         streamCard.reveal(0.3)
                         networkCard.reveal(0.33)
+                        controllerCard.reveal(0.345)
                         appCard.reveal(0.36)
                     }
                 }
@@ -146,6 +150,10 @@ struct AntCloudHomeView: View {
             }
             .sensoryFeedback(.success, trigger: networkCheck.stage == .done)
         }
+        .sheet(isPresented: $showingControllers) {
+            ControllersSheet(monitor: gamepads) { showingControllers = false }
+        }
+        .onAppear(perform: previewControllers)
         .alert(item: $session.notice) { notice in
             Alert(title: Text(notice.title), message: Text(notice.message))
         }
@@ -275,6 +283,42 @@ struct AntCloudHomeView: View {
             }
         }
         .buttonStyle(.plain)
+    }
+
+    private var controllerCard: some View {
+        Button { showingControllers = true } label: {
+            card {
+                HStack(spacing: 12) {
+                    Image(systemName: "gamecontroller.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 34, height: 34)
+                        .background((gamepads.pads.isEmpty ? Color.antBlue : .green).gradient,
+                                    in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Controller check").font(.subheadline.weight(.semibold))
+                        Text(gamepads.pads.first.map { "\($0.name) · Ready to play" } ?? "Check a controller's buttons and sticks before you play")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Debug builds only: `ANTCLOUD_PREVIEW=home:<phase>:controllers` opens the controller check, and
+    /// `:sample` shows a sample controller mid-press.
+    private func previewControllers() {
+        #if DEBUG
+        guard let value = ProcessInfo.processInfo.environment["ANTCLOUD_PREVIEW"] else { return }
+        if value.contains(":sample") { gamepads.showPreview() }
+        if value.contains(":controllers") { showingControllers = true }
+        #endif
     }
 
     /// The last result, e.g. "45 ms · Good · 322 Mbps", or what the check does.

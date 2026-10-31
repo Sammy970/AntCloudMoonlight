@@ -113,7 +113,7 @@ final class AntCloudStore: ObservableObject {
             "idle": .idle, "connecting": .connecting, "queued": .queued(position: 3), "booting": .booting,
             "ready": .ready, "pairing": .pairing, "streaming": .streaming,
         ]
-        if value.hasPrefix("home:"), let phase = phases[String(value.dropFirst(5))] { session.previewPhase(phase) }
+        if value.hasPrefix("home:"), let name = value.dropFirst(5).split(separator: ":").first, let phase = phases[String(name)] { session.previewPhase(phase) }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             let style: UIUserInterfaceStyle = env["ANTCLOUD_APPEARANCE"] == "light" ? .light : env["ANTCLOUD_APPEARANCE"] == "dark" ? .dark : .unspecified
             Self.keyWindow?.overrideUserInterfaceStyle = style

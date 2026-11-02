@@ -385,7 +385,7 @@ final class OSCEditorViewController: UIViewController {
         sceneButton.configuration?.image = UIImage(systemName: backdrop.bright ? "moon.stars.fill" : "sun.max.fill")
     }
 
-    private func close() {
+    func close() {
         controls.releaseAll()
         controls.setEditing(false)
         dismiss(animated: true) { [weak self] in self?.onClose?() }

@@ -92,8 +92,9 @@ struct AntCloudHomeView: View {
             .padding(.horizontal, 20)
             .padding(.top, 8)
             .padding(.bottom, 32)
-            // Exactly the screen's width, so nothing can push the page sideways.
-            .containerRelativeFrame(.horizontal)
+            // The screen's width, so nothing can push the page sideways. Not containerRelativeFrame:
+            // it kept a stale width after the controls editor rotated the app to landscape and back.
+            .frame(maxWidth: .infinity)
             .animation(.spring(response: 0.45, dampingFraction: 0.9), value: session.phase)
         }
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
@@ -317,6 +318,20 @@ struct AntCloudHomeView: View {
         guard let value = ProcessInfo.processInfo.environment["ANTCLOUD_PREVIEW"] else { return }
         if value.contains(":sample") { gamepads.showPreview() }
         if value.contains(":controllers") { showingControllers = true }
+        // `:settings` opens Stream settings; `:roundtrip` then opens the controls editor and closes it again.
+        if value.contains(":settings") { showingSettings = true }
+        if value.contains(":roundtrip") {
+            Task { @MainActor in
+                try? await Task.sleep(for: .seconds(2))
+                AntCloudPanel.presentControlsEditor()
+                try? await Task.sleep(for: .seconds(3))
+                var top = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first?.keyWindow?.rootViewController
+                while let next = top?.presentedViewController { top = next }
+                (top as? OSCEditorViewController)?.close()
+                try? await Task.sleep(for: .seconds(3))
+                showingSettings = false
+            }
+        }
         #endif
     }
 

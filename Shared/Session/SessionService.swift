@@ -86,7 +86,7 @@ final class SessionService: ObservableObject {
     /// instead of booting the PC only for the server to refuse it later.
     func startIfAllowed(settings: StreamSettings, nightPlan: Bool) async {
         guard phase == .idle else { return }
-        if nightPlan && !Self.nightPlanMonitorDisabled {
+        if nightPlan {
             let now = await api.serverTime() ?? .now
             guard Self.isNightPlanWindow(now) else {
                 Log.info("[session] night plan outside its hours; not starting")
@@ -260,19 +260,8 @@ final class SessionService: ObservableObject {
         }
     }
 
-    /// When true, the client-side night-plan monitor is disabled (for testing). This does NOT
-    /// affect the server's own enforcement of night-plan hours; it only stops our local 9:35 check.
-    static var nightPlanMonitorDisabled: Bool {
-        get { UserDefaults.standard.bool(forKey: "nightPlanMonitorDisabled") }
-        set { UserDefaults.standard.set(newValue, forKey: "nightPlanMonitorDisabled") }
-    }
-
     /// Night plans are only valid 00:30–09:35 IST; end the session once the server clock passes the cutoff.
     private func startNightPlanMonitor() {
-        if Self.nightPlanMonitorDisabled {
-            Log.info("[session] night-plan monitor disabled by setting; not starting")
-            return
-        }
         nightPlanTask?.cancel()
         nightPlanTask = Task { [weak self] in
             var ist = Calendar(identifier: .gregorian)

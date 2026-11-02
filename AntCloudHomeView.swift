@@ -9,7 +9,6 @@ struct AntCloudHomeView: View {
     @Environment(\.openURL) private var openURL
     @Environment(\.dismiss) private var dismiss
     @State private var connecting = false
-    @State private var nightMonitorOff = SessionService.nightPlanMonitorDisabled
     @State private var prefs = MoonlightPrefs.load()
     @State private var showingSettings = false
     @State private var showingNetwork = false
@@ -348,18 +347,6 @@ struct AntCloudHomeView: View {
                     .font(.footnote)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
-                Divider()
-                Toggle(isOn: $nightMonitorOff) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Skip night-plan checks").font(.subheadline)
-                        Text("For testing. Skips the app's own hours check and 9:35 AM IST cutoff; AntCloud still enforces plan hours on its servers.")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .onChange(of: nightMonitorOff) { _, value in
-                    SessionService.nightPlanMonitorDisabled = value
-                }
             }
         }
     }

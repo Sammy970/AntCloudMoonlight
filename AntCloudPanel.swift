@@ -25,7 +25,8 @@ final class AntCloudPanel: NSObject {
 
     /// Read by AppDelegate's supportedInterfaceOrientationsForWindow.
     @objc @MainActor static var orientationMask: NSNumber {
-        let mask: UIInterfaceOrientationMask = AntCloudStore.shared.panelVisible ? .portrait : .landscape
+        let store = AntCloudStore.shared
+        let mask: UIInterfaceOrientationMask = store.panelVisible && !store.controlsEditorOpen ? .portrait : .landscape
         return NSNumber(value: mask.rawValue)
     }
 
@@ -40,6 +41,23 @@ final class AntCloudPanel: NSObject {
             }
         }
         scene.requestGeometryUpdate(.iOS(interfaceOrientations: UIInterfaceOrientationMask(rawValue: orientationMask.uintValue)))
+    }
+
+    /// Opens the full-screen editor for the on-screen gamepad's layout over whatever is on screen.
+    @MainActor static func presentControlsEditor(preview: OSCEditorViewController.Preview = .none, bright: Bool = false) {
+        guard let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first,
+              var top = scene.windows.first(where: \.isKeyWindow)?.rootViewController ?? scene.windows.first?.rootViewController else { return }
+        while let presented = top.presentedViewController { top = presented }
+        let store = AntCloudStore.shared
+        let editor = OSCEditorViewController(preview: preview, bright: bright)
+        editor.onClose = {
+            store.controlsEditorOpen = false
+            applyOrientation()
+        }
+        // The editor is landscape, so the app's mask has to allow it before it appears.
+        store.controlsEditorOpen = true
+        applyOrientation()
+        top.present(editor, animated: true)
     }
 
     @objc @MainActor static func takePendingConnectAddress() -> String? {
@@ -80,6 +98,8 @@ final class AntCloudStore: ObservableObject {
     /// True while the panel is on screen; otherwise session notices are shown over Moonlight.
     /// Starts true so the app launches in portrait straight into AntCloud.
     var panelVisible = true
+    /// True while the on-screen controls editor is open over the panel; it needs landscape.
+    var controlsEditorOpen = false
     private var noticeSubscription: AnyCancellable?
 
     private init() {
@@ -114,6 +134,20 @@ final class AntCloudStore: ObservableObject {
             "ready": .ready, "pairing": .pairing, "streaming": .streaming,
         ]
         if value.hasPrefix("home:"), let name = value.dropFirst(5).split(separator: ":").first, let phase = phases[String(name)] { session.previewPhase(phase) }
+        // `controls` opens the on-screen controls editor; add `:selected`, `:play` (controls lit as if held) or
+        // `:bright` (day scene). `controls:selftest` runs the input-logic checks and logs the results.
+        if value.hasPrefix("controls") {
+            let options = Set(value.split(separator: ":").dropFirst().map(String.init))
+            if options.contains("selftest") {
+                OSCSelfTest.run()
+            } else {
+                let preview: OSCEditorViewController.Preview = options.contains("play") ? .playing : options.contains("selected") ? .selected : .none
+                Task { @MainActor in
+                    try? await Task.sleep(for: .seconds(1.5))
+                    AntCloudPanel.presentControlsEditor(preview: preview, bright: options.contains("bright"))
+                }
+            }
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             let style: UIUserInterfaceStyle = env["ANTCLOUD_APPEARANCE"] == "light" ? .light : env["ANTCLOUD_APPEARANCE"] == "dark" ? .dark : .unspecified
             Self.keyWindow?.overrideUserInterfaceStyle = style

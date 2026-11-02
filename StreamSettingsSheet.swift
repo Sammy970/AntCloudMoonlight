@@ -115,6 +115,23 @@ struct StreamSettingsSheet: View {
                         Text("Simple").tag(2)
                         Text("Full").tag(3)
                     }
+                    Button {
+                        AntCloudPanel.presentControlsEditor()
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Customize on-screen controls")
+                                Text("Move, resize or hide each control, and set how see-through they are.")
+                                    .font(.footnote)
+                                    .foregroundStyle(.secondary)
+                            }
+                            Spacer(minLength: 8)
+                            Image(systemName: "chevron.right")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                    .foregroundStyle(.primary)
                 } header: {
                     Text("Controls")
                 } footer: {

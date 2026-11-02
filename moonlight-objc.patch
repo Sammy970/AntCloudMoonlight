@@ -53,6 +53,22 @@ index 5db73f5..b036377 100644
  - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
  #if !TARGET_OS_TV
      UIApplicationShortcutItem* shortcut = [launchOptions valueForKey:UIApplicationLaunchOptionsShortcutItemKey];
+diff --git a/Limelight/Input/StreamView.m b/Limelight/Input/StreamView.m
+index 7dedeb3..aee9202 100644
+--- a/Limelight/Input/StreamView.m
++++ b/Limelight/Input/StreamView.m
+@@ -74,7 +74,10 @@ - (void) setupStreamView:(ControllerSupport*)controllerSupport
+         self->touchHandler = [[RelativeTouchHandler alloc] initWithView:self];
+     }
+     
+-    onScreenControls = [[OnScreenControls alloc] initWithView:self controllerSup:controllerSupport streamConfig:streamConfig];
++    // AntCloud: the glass on-screen controls (AntCloudOnScreenControls, in the AntCloud panel's Swift code) take the
++    // place of Moonlight's own; they answer the same messages. Falls back to Moonlight's if they're missing.
++    Class oscClass = NSClassFromString(@"AntCloudOnScreenControls") ?: [OnScreenControls class];
++    onScreenControls = [[oscClass alloc] initWithView:self controllerSup:controllerSupport streamConfig:streamConfig];
+     OnScreenControlsLevel level = (OnScreenControlsLevel)[settings.onscreenControls integerValue];
+     if (settings.absoluteTouchMode) {
+         Log(LOG_I, @"On-screen controls disabled in absolute touch mode");
 diff --git a/Limelight/Limelight-Info.plist b/Limelight/Limelight-Info.plist
 index 963c433..56a4e51 100644
 --- a/Limelight/Limelight-Info.plist

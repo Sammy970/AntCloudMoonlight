@@ -75,6 +75,17 @@ private struct StreamOverlayPhoneRoot: View {
                 .buttonStyle(.plain)
                 .reportsTouchableFrame(to: window, id: 1)
                 .transition(.scale(scale: 0.9, anchor: .top).combined(with: .opacity))
+
+                Button(action: editControls) {
+                    Label("Edit controls", systemImage: "gamecontroller")
+                        .font(.footnote.weight(.semibold))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .glassCapsule()
+                }
+                .buttonStyle(.plain)
+                .reportsTouchableFrame(to: window, id: 2)
+                .transition(.scale(scale: 0.9, anchor: .top).combined(with: .opacity))
             }
 
             if let toast = model.toast {
@@ -118,6 +129,12 @@ private struct StreamOverlayPhoneRoot: View {
     private func toggleCard() {
         model.cardVisible.toggle()
         scheduleDim()
+    }
+
+    /// Opens the on-screen controls' layout editor over the stream.
+    private func editControls() {
+        model.cardVisible = false
+        NotificationCenter.default.post(name: .antCloudEditControls, object: nil)
     }
 
     private func scheduleDim() {

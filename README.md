@@ -19,6 +19,11 @@ AntCloud built into the open-source Moonlight client: one app, automatic pairing
 
 <p><a href="#install-with-sidestore-no-xcode-needed"><b>Install</b></a> &nbsp;·&nbsp; <a href="#what-it-does">What it does</a> &nbsp;·&nbsp; <a href="#build-and-install">Build and install</a> &nbsp;·&nbsp; <a href="#renewing-every-7-days">Renewing every 7 days</a> &nbsp;·&nbsp; <a href="#how-it-works">How it works</a></p>
 
+<p>
+  <a href="https://discord.gg/GVDYtpWHps"><img src="https://img.shields.io/badge/Discord-Join%20the%20community-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Join the Samyak Labs Discord"></a><br>
+  <b>Need help, found a bug, or have an idea?</b> Join the community: get help, report bugs and suggest features for AntCloud.
+</p>
+
 </div>
 
 > [!IMPORTANT]

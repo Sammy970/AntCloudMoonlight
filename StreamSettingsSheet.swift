@@ -4,6 +4,9 @@ import SwiftUI
 /// them when it connects, so editing them here is all it takes.
 struct MoonlightPrefs: Equatable {
     var height = 1080
+    /// The cloud PC's display shape. Stored in Moonlight as the width it streams at; `AntCloudPanel` reads it back
+    /// from that width to tell the cloud PC which shape to use.
+    var aspect = AspectRatio.wide
     var fps = 60
     var bitrateKbps = 20000
     var hevc = true
@@ -15,14 +18,16 @@ struct MoonlightPrefs: Equatable {
     static let heights = [720, 1080, 1440, 2160]
     static let bitrates = [5000, 10000, 15000, 20000, 30000, 40000, 50000]
 
-    /// 16:9, matching the cloud PC's display.
-    var width: Int { height * 16 / 9 }
+    var width: Int { aspect.width(height: height) }
 
     static func load() -> MoonlightPrefs {
         var prefs = MoonlightPrefs()
         guard let s = DataManager().getSettings() else { return prefs }
         let height = s.height.intValue
         prefs.height = heights.min { abs($0 - height) < abs($1 - height) } ?? 1080
+        // Same thresholds as `AntCloudPanel.moonlightStreamSettings`, so the two always agree.
+        let ratio = height > 0 ? s.width.doubleValue / Double(height) : 16.0 / 9.0
+        prefs.aspect = ratio >= 2.2 ? .ultrawide : ratio >= 1.7 ? .wide : .tall
         prefs.fps = s.framerate.intValue
         prefs.bitrateKbps = s.bitrate.intValue
         // `preferredCodec` is an anonymous C enum Swift doesn't import; 1 == CODEC_PREF_H264.
@@ -61,11 +66,23 @@ struct MoonlightPrefs: Equatable {
     /// e.g. "1080p · 60 FPS · 20 Mbps · HEVC"
     var summary: String {
         let res = height == 2160 ? "4K" : "\(height)p"
-        return "\(res) · \(fps) FPS · \(bitrateKbps / 1000) Mbps · \(hevc ? "HEVC" : "H.264")"
+        let shape = aspect == .wide ? "" : " \(aspect.rawValue)"
+        return "\(res)\(shape) · \(fps) FPS · \(bitrateKbps / 1000) Mbps · \(hevc ? "HEVC" : "H.264")"
     }
 
     var gigabytesPerHour: String {
         (Double(bitrateKbps) * 1000 * 3600 / 8 / 1e9).formatted(.number.precision(.fractionLength(0...1)))
+    }
+}
+
+extension AspectRatio {
+    /// The width Moonlight streams at for a height, the same sizes the Mac and Windows clients use.
+    func width(height: Int) -> Int {
+        switch self {
+        case .wide: height * 16 / 9
+        case .tall: height * 16 / 10
+        case .ultrawide: [720: 1680, 1080: 2560, 1440: 3440, 2160: 5120][height] ?? height * 64 / 27
+        }
     }
 }
 
@@ -87,13 +104,17 @@ struct StreamSettingsSheet: View {
                         Text("120").tag(120)
                     }
                     .pickerStyle(.segmented)
+                    Picker("Aspect ratio", selection: $prefs.aspect) {
+                        ForEach(AspectRatio.allCases) { Text($0.rawValue).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
                     Picker("Bitrate", selection: $prefs.bitrateKbps) {
                         ForEach(bitrateOptions, id: \.self) { Text("\($0 / 1000) Mbps").tag($0) }
                     }
                 } header: {
                     Text("Picture")
                 } footer: {
-                    Text("Streams at \(prefs.width) × \(prefs.height) and uses up to \(prefs.gigabytesPerHour) GB of data per hour. Lower the bitrate if the picture stutters.")
+                    Text("Streams at \(prefs.width) × \(prefs.height) and uses up to \(prefs.gigabytesPerHour) GB of data per hour. Lower the bitrate if the picture stutters. 21:9 fills more of an iPhone screen in landscape; 16:9 leaves bars at the sides but every game supports it.")
                 }
 
                 Section {

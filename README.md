@@ -49,6 +49,9 @@ does the streaming underneath; you never see its host list or settings.
 - **Controller check** (under Controls): a drawn controller mirrors every press, stick and trigger of your controller live, with its
   type, battery, exact stick values and a vibration test, so you know it'll work before you start the cloud PC.
 - **Glass on-screen controls** you can move, resize, remove and fade, with floating sticks that appear under your thumb (below).
+- **A gamepad button in the stream** that turns the on-screen controls off and on, so you can move the mouse while floating sticks are on (below).
+- **Stretch to fill screen:** removes the black bars at the sides on a Windows 10 cloud PC, which always has a 16:9 display. The picture looks a little wider than it is.
+- **16:9, 16:10 or 21:9** for the cloud PC's display, offered on Windows 11 cloud PCs, where AntCloud supports it.
 - **Night plans checked up front:** outside 12:30–9:30 AM IST the app says so before it boots anything.
 - **In-stream overlay:** a small pill at the top of the stream shows time left and latency; tap it for the
   full card. It warns you when the cloud PC's connection gets busy and when plan time runs low.
@@ -108,6 +111,27 @@ way: a small pill at the top, the controls themselves in the clear, and a faint 
     </td>
   </tr>
 </table>
+
+### Turn the gamepad off during a stream
+
+<table>
+  <tr>
+    <td width="50%" valign="top"><img src=".github/screenshots/gamepad-button-on.png" width="100%" alt="The stream with the on-screen controls showing and the gamepad button lit at the top right"><br><sub>Controls on.</sub></td>
+    <td width="50%" valign="top"><img src=".github/screenshots/gamepad-button-off.png" width="100%" alt="The stream with the on-screen controls hidden and the gamepad button crossed out, with the note On-screen controls off"><br><sub>Controls off: your touches move the mouse.</sub></td>
+  </tr>
+</table>
+
+A small round button at the top right of the stream turns the on-screen controls off and on for that stream. With floating sticks on, every touch becomes a stick, so switch the controls off to move the mouse, then back on when you need them.
+
+- **Off** releases everything that is held, hides the controls and sends your touches to Moonlight's normal mouse and touch handling.
+- **On** brings the controls back exactly as you set them. Your saved settings never change, and a physical controller works either way.
+- The button shows in trackpad mode (Moonlight turns the on-screen controls off in direct touch mode) and stays hidden if the on-screen controls are set to Off.
+- In the layout editor's **Try it** mode the button is shown too, so you can see where it sits. Tapping it there only explains what it does.
+
+<p align="center">
+  <img src=".github/screenshots/gamepad-button-try-it.png" width="100%" alt="The layout editor in Try it mode: the blue gamepad button at the top right with a note saying that in a stream it turns the on-screen controls off so you can use the mouse">
+  <br><sub>The button in Try it mode.</sub>
+</p>
 
 ## Install with SideStore (no Xcode needed)
 

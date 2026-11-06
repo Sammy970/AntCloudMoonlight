@@ -8,7 +8,7 @@
 AntCloud built into the open-source Moonlight client: one app, automatic pairing, no addresses or PINs to type.
 
 <p>
-  <img src="https://img.shields.io/badge/version-0.16.5-4A86E8?style=flat-square" alt="Version 0.16.5">
+  <img src="https://img.shields.io/badge/version-0.16.6-4A86E8?style=flat-square" alt="Version 0.16.6">
   <img src="https://img.shields.io/badge/iOS-17%2B%20·%20glass%20on%2026%2B-111111?style=flat-square&logo=apple&logoColor=white" alt="iOS 26+">
   <img src="https://img.shields.io/badge/Swift-5-F05138?style=flat-square&logo=swift&logoColor=white" alt="Swift">
   <img src="https://img.shields.io/badge/UI-Liquid%20Glass-4A86E8?style=flat-square" alt="Liquid Glass">
@@ -111,7 +111,7 @@ way: a small pill at the top, the controls themselves in the clear, and a faint 
 
 ## Install with SideStore (no Xcode needed)
 
-**[Download AntCloud-0.16.5.ipa](https://github.com/Sammy970/AntCloudMoonlight/releases/latest)**: unsigned, so it
+**[Download AntCloud-0.16.6.ipa](https://github.com/Sammy970/AntCloudMoonlight/releases/latest)**: unsigned, so it
 contains nothing personal, and you sign it with your own Apple ID.
 
 1. Set up [SideStore](https://sidestore.io) on your iPhone (a one-time setup with a computer; their guide walks you

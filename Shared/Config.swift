@@ -37,6 +37,7 @@ enum Config {
 
     static let creatorName = "Samyak Jain"
     static let creatorGitHub = URL(string: "https://github.com/Sammy970")!
+    static let discordInvite = URL(string: "https://discord.gg/GVDYtpWHps")!
     static let creatorX = URL(string: "https://x.com/Sammy_970")!
     static let creatorAvatar = URL(string: "https://github.com/Sammy970.png?size=240")!
     static let moonlightURL = URL(string: "https://moonlight-stream.org")!

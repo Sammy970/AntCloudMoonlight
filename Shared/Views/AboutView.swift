@@ -8,7 +8,8 @@ struct AboutView: View {
     var body: some View {
         VStack(spacing: 22) {
             header.reveal(0)
-            makerCard.reveal(0.08)
+            discordCard.reveal(0.06)
+            makerCard.reveal(0.1)
             projectCard.reveal(0.16)
             Text("Unofficial. Not made, endorsed or supported by AntCloud.\n\"AntCloud\" and its logo belong to their owners.")
                 .font(.caption)
@@ -45,6 +46,35 @@ struct AboutView: View {
                 .padding(.vertical, 5)
                 .glassCapsule(tint: Color.antBlue.opacity(0.15))
         }
+    }
+
+    // MARK: Discord
+
+    private var discordCard: some View {
+        Button { openURL(Config.discordInvite) } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "bubble.left.and.bubble.right.fill")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 40, height: 40)
+                    .background(Color.discordBlurple.gradient, in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Join our Discord").font(.headline)
+                    Text("Questions, bugs or ideas? Come and chat.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "arrow.up.right").font(.caption.weight(.semibold)).foregroundStyle(Color.discordBlurple)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .glassSurface(cornerRadius: 22)
+        .help(Config.discordInvite.absoluteString)
     }
 
     // MARK: Maker
@@ -146,4 +176,9 @@ struct AboutView: View {
         }
         .buttonStyle(.plain)
     }
+}
+
+private extension Color {
+    /// Discord's brand blurple, used only for the Discord link.
+    static let discordBlurple = Color(red: 88 / 255, green: 101 / 255, blue: 242 / 255)
 }

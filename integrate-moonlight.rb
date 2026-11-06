@@ -6,6 +6,7 @@
 #
 # This script is idempotent. It:
 #   1. applies moonlight-objc.patch (edits to MainFrameViewController.m, AppDelegate.m, Info.plist,
+#      StreamView.m and VideoDecoderRenderer.m for "Stretch to fill",
 #      including the home-screen name "AntCloud")
 #   2. adds the AntCloud Swift files (panel + Shared), the sign-in logo and the SocketIO package
 #      to the Moonlight target

@@ -183,7 +183,7 @@ AntCloud panel ── Start ──▶ Socket.IO session queues and boots the clo
 | `OSCSelfTest.swift` | Input-logic checks for the on-screen gamepad (`ANTCLOUD_PREVIEW=controls:selftest` in a debug build) |
 | `AppExpiry.swift` | Reads the signing profile's expiry and schedules the reminder |
 | `Shared/` | API client, sign-in, session logic and shared views (same code as the Mac app) |
-| `moonlight-objc.patch` | Moonlight changes: launch into AntCloud, auto-connect and pair, return after the stream, orientation, launch screen, name |
+| `moonlight-objc.patch` | Moonlight changes: launch into AntCloud, auto-connect and pair, return after the stream, orientation, launch screen, name, stretch to fill |
 | `integrate-moonlight.rb` | Wires everything into a Moonlight checkout |
 | `scripts/renew-and-install.sh` | Renews the signing profile, builds and installs |
 | `Assets/`, `AntCloudLogo.png`, `AppIcon-1024.png` | Launch screen colour and logo, sign-in logo, app icon |

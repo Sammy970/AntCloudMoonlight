@@ -192,6 +192,11 @@ final class SessionService: ObservableObject {
     /// Pushes new display settings to the VM (the server reconfigures the host resolution).
     func applySettings(_ settings: StreamSettings) {
         socket?.emit("setstream", settings.serverSpec)
+        // AntCloud's own client sends the shape on its own as well; `setstream` alone leaves the display at 16:9.
+        if let token = api.accessToken {
+            socket?.emit("aspect-ratio-update", ["aspectRatio": settings.aspect.serverCode, "token": token])
+        }
+        Log.info("[session] display set to \"\(settings.serverSpec)\" (\(settings.aspect.rawValue))")
     }
 
     // MARK: Streaming

@@ -14,6 +14,10 @@ struct MoonlightPrefs: Equatable {
     var onscreenControls = 1
     var statsOverlay = false
     var audioOnPC = false
+    /// Fill the whole screen, stretching the picture (no black bars). Read by Moonlight's video and touch code.
+    var stretchToFill = false
+
+    static let stretchKey = "AntCloudStretchToFill"
 
     static let heights = [720, 1080, 1440, 2160]
     static let bitrates = [5000, 10000, 15000, 20000, 30000, 40000, 50000]
@@ -36,11 +40,13 @@ struct MoonlightPrefs: Equatable {
         prefs.onscreenControls = s.onscreenControls.intValue
         prefs.statsOverlay = s.statsOverlay
         prefs.audioOnPC = s.playAudioOnPC
+        prefs.stretchToFill = UserDefaults.standard.bool(forKey: stretchKey)
         return prefs
     }
 
     /// Writes these values and keeps every other Moonlight setting as it was.
     func save() {
+        UserDefaults.standard.set(stretchToFill, forKey: Self.stretchKey)
         let data = DataManager()
         guard let s = data.getSettings() else { return }
         data.saveSettings(
@@ -89,6 +95,9 @@ extension AspectRatio {
 /// Stream settings, edited in AntCloud and saved straight into Moonlight.
 struct StreamSettingsSheet: View {
     @Binding var prefs: MoonlightPrefs
+    /// 16:10 and 21:9 only work on Windows 11 cloud PCs (AntCloud's own app offers them only there); a Windows 10
+    /// one keeps a 16:9 display and the stream gets black bars at the sides.
+    var otherShapesAllowed: Bool
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -104,17 +113,26 @@ struct StreamSettingsSheet: View {
                         Text("120").tag(120)
                     }
                     .pickerStyle(.segmented)
-                    Picker("Aspect ratio", selection: $prefs.aspect) {
-                        ForEach(AspectRatio.allCases) { Text($0.rawValue).tag($0) }
+                    if otherShapesAllowed {
+                        Picker("Aspect ratio", selection: $prefs.aspect) {
+                            ForEach(AspectRatio.allCases) { Text($0.rawValue).tag($0) }
+                        }
+                        .pickerStyle(.segmented)
                     }
-                    .pickerStyle(.segmented)
                     Picker("Bitrate", selection: $prefs.bitrateKbps) {
                         ForEach(bitrateOptions, id: \.self) { Text("\($0 / 1000) Mbps").tag($0) }
                     }
                 } header: {
                     Text("Picture")
                 } footer: {
-                    Text("Streams at \(prefs.width) × \(prefs.height) and uses up to \(prefs.gigabytesPerHour) GB of data per hour. Lower the bitrate if the picture stutters. 21:9 fills more of an iPhone screen in landscape; 16:9 leaves bars at the sides but every game supports it.")
+                    Text("Streams at \(prefs.width) × \(prefs.height) and uses up to \(prefs.gigabytesPerHour) GB of data per hour. Lower the bitrate if the picture stutters. " + shapeNote)
+                }
+
+                Section {
+                    Toggle(isOn: $prefs.stretchToFill) {
+                        Text("Stretch to fill screen")
+                        Text("Removes the black bars at the sides. The picture looks a little wider than it is.")
+                    }
                 }
 
                 Section {
@@ -141,6 +159,12 @@ struct StreamSettingsSheet: View {
             }
         }
         .onChange(of: prefs) { _, value in value.save() }
+    }
+
+    private var shapeNote: String {
+        otherShapesAllowed
+            ? "21:9 fills more of an iPhone screen in landscape; 16:9 leaves bars at the sides but every game supports it."
+            : "16:10 and 21:9 need a Windows 11 cloud PC. Yours runs Windows 10, so it streams at 16:9; turn on Stretch to fill to remove the bars."
     }
 
     /// The standard steps, plus the current value if Moonlight had a custom one.

@@ -14,6 +14,8 @@ struct UserProfile {
     let totalTimeMonth: Int
     let timeUsedMonth: Int
     let preferredResolution: String?
+    /// The cloud PC runs Windows 11. AntCloud's own client offers 16:10 and 21:9 only to these accounts.
+    let win11: Bool
 
     init(json: [String: Any]) {
         firstName = json["firstName"] as? String ?? "User"
@@ -23,6 +25,13 @@ struct UserProfile {
         totalTimeMonth = json["totalTimeMonth"] as? Int ?? 0
         timeUsedMonth = json["timeUsedMonth"] as? Int ?? 0
         preferredResolution = json["resolution"].map { "\($0)" }
+        // Read the way AntCloud's Windows client does: a bool, "true", or a non-zero number.
+        win11 = switch json["win11"] {
+        case let b as Bool: b
+        case let s as String: s.lowercased() == "true"
+        case let n as NSNumber: n.intValue != 0
+        default: false
+        }
     }
 
     /// "basic" means no paid plan; the Windows client refuses to start a stream for it.
@@ -55,6 +64,8 @@ struct UserProfile {
 /// "Cannot GET /api/…" 404, which `send` reports as a service change rather than a plain error.
 final class APIClient {
     var accessToken: String?
+    /// What `me()` last logged, so a profile refresh only logs when something changed.
+    private var lastProfileSummary: String?
     /// Called once on a 401 to obtain a new access token; returns nil if refresh failed.
     var refreshHandler: (() async -> String?)?
 
@@ -94,7 +105,10 @@ final class APIClient {
         guard let user = json?["user"] as? [String: Any] else {
             throw APIError(status: 401, message: "Session expired. Please log in again.")
         }
-        return UserProfile(json: user)
+        let profile = UserProfile(json: user)
+        let summary = "plan \(profile.currentPlan), win11 \(profile.win11) (sent as \(user["win11"].map { "\($0)" } ?? "nothing"))"
+        if summary != lastProfileSummary { Log.info("[api] profile: \(summary)"); lastProfileSummary = summary }
+        return profile
     }
 
     // MARK: VM

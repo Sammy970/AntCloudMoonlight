@@ -104,7 +104,11 @@ struct AntCloudHomeView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { accountMenu }
         .refreshable { await auth.reloadProfile() }
-        .onAppear { AppExpiry.scheduleReminder() }
+        .onAppear {
+            AppExpiry.scheduleReminder()
+            keepShapeSupported()
+        }
+        .onChange(of: auth.profile?.win11) { _, _ in keepShapeSupported() }
         .sensoryFeedback(trigger: session.phase) { old, new in
             switch new {
             case .ready, .streaming: .success
@@ -115,7 +119,7 @@ struct AntCloudHomeView: View {
         .sensoryFeedback(.warning, trigger: session.notice?.id)
         .sensoryFeedback(.selection, trigger: prefs)
         .sheet(isPresented: $showingSettings) {
-            StreamSettingsSheet(prefs: $prefs)
+            StreamSettingsSheet(prefs: $prefs, otherShapesAllowed: auth.profile?.win11 == true)
         }
         .sheet(isPresented: $showingAbout) {
             NavigationStack {
@@ -323,6 +327,15 @@ struct AntCloudHomeView: View {
         var text = parts.joined(separator: " · ")
         if let pad = gamepads.pads.first { text += " · \(pad.name) connected" }
         return text
+    }
+
+    /// A Windows 10 cloud PC can't change its display shape, so a 16:10 or 21:9 choice (made before the app knew,
+    /// or on another account) would only add black bars. Put it back to 16:9 in Moonlight.
+    private func keepShapeSupported() {
+        guard let profile = auth.profile, !profile.win11, prefs.aspect != .wide else { return }
+        Log.info("[panel] \(prefs.aspect.rawValue) needs a Windows 11 cloud PC; streaming at 16:9")
+        prefs.aspect = .wide
+        prefs.save()
     }
 
     /// Debug builds only: `ANTCLOUD_PREVIEW=home:<phase>:controllers` opens the controller check, and
